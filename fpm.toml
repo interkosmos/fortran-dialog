@@ -1,0 +1,11 @@
+name = "fortran-dialog"
+version = "0.1.0"
+license = "ISC"
+author = "Philipp Engel"
+maintainer = "@interkosmos"
+copyright = "Copyright (c) 2023, Philipp Engel"
+description = "Library to create text user interfaces in Fortran 2008"
+keywords = ["dialog", "tui"]
+
+[library]
+source-dir = "src"
