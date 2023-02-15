@@ -130,14 +130,15 @@ contains
     end subroutine widget_dselect
 
     subroutine widget_editbox()
-        character(len=128) :: line
+        character(len=512) :: line
+        logical            :: eof
         type(dialog_type)  :: dialog
 
         call dialog_editbox(dialog, './examples/wumpus.f90', 18, 72, title='Edit Box')
 
         do
-            call dialog_read(dialog, line)
-            if (len_trim(line) == 0) exit
+            call dialog_read(dialog, line, eof)
+            if (eof) exit
             print '(a)', trim(line)
         end do
 
@@ -175,8 +176,7 @@ contains
                     call dialog_write(dialog, 'Almost done ...' // NL)
             end select
 
-            call dialog_write(dialog, 'XXX' // NL)
-            call dialog_write(dialog, itoa(i) // NL)
+            call dialog_write(dialog, 'XXX' // NL // itoa(i) // NL)
         end do
 
         call dialog_close(dialog)
@@ -202,6 +202,7 @@ contains
 
     subroutine widget_inputmenu()
         character(len=32) :: renamed
+        logical           :: eof
         type(dialog_type) :: dialog
         type(menu_type)   :: menu(3)
 
@@ -213,8 +214,8 @@ contains
                               no_tags=.true., title='Input Menu Demo')
 
         do
-            call dialog_read(dialog, renamed)
-            if (len_trim(renamed) == 0) exit
+            call dialog_read(dialog, renamed, eof)
+            if (eof) exit
             print '(a)', trim(renamed)
         end do
 
@@ -281,9 +282,9 @@ contains
 
         call dialog_programbox(dialog, 'Output:', 12, 32, title='Program Box')
 
-        call dialog_write(dialog, 'zzz ... ' // NL)
-        call dialog_write(dialog, 'zzz ... ' // NL)
-        call dialog_write(dialog, 'zzz ... ' // NL)
+        call dialog_write(dialog, 'zzz ...' // NL)
+        call dialog_write(dialog, 'zzz ...' // NL)
+        call dialog_write(dialog, 'zzz ...' // NL)
         call dialog_close(dialog)
     end subroutine widget_programbox
 
@@ -294,7 +295,7 @@ contains
         call dialog_progressbox(dialog, 'Output:', 12, 32, title='Progress Box')
 
         do i = 1, 100000
-            call dialog_write(dialog, 'zzz ... ' // NL)
+            call dialog_write(dialog, 'zzz ...' // NL)
         end do
 
         call dialog_close(dialog)

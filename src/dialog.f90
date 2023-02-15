@@ -360,20 +360,24 @@ contains
         if (rc == 0) dialog%pipe%ptr = c_null_ptr
     end subroutine dialog_close
 
-    subroutine dialog_read(dialog, str)
-        type(dialog_type), intent(inout) :: dialog
-        character(len=*),  intent(inout) :: str
+    subroutine dialog_read(dialog, str, eof)
+        type(dialog_type), intent(inout)         :: dialog
+        character(len=*),  intent(inout)         :: str
+        logical,           intent(out), optional :: eof
 
         character(len=len(str)) :: buf
         integer                 :: i, j
         type(c_ptr)             :: ptr
 
+        if (present(eof)) eof = .true.
         if (.not. c_associated(dialog%pipe%ptr)) return
         if (dialog%pipe%mode /= PIPE_RDONLY) return
 
         str = ' '
         buf = repeat(c_null_char, len(buf))
         ptr = c_fgets(buf, len(buf), dialog%pipe%ptr)
+        if (.not. c_associated(ptr)) return
+        if (present(eof)) eof = .false.
 
         i = index(buf, c_null_char)
         if (i == 1) return

@@ -140,13 +140,14 @@ print '("Directory: ", a)', trim(path)
 
 ```fortran
 character(len=512) :: line
+logical            :: eof
 type(dialog_type)  :: dialog
 
 call dialog_editbox(dialog, './examples/wumpus.f90', 18, 72, title='Edit Box')
 
 do
-    call dialog_read(dialog, line)
-    if (len_trim(line) == 0) exit
+    call dialog_read(dialog, line, eof)
+    if (eof) exit
     print '(a)', trim(line)
 end do
 
@@ -192,9 +193,7 @@ do i = 1, 100
     end select
 
     write (a, '(i0)') i
-
-    call dialog_write(dialog, 'XXX' // NL)
-    call dialog_write(dialog, a // NL)
+    call dialog_write(dialog, 'XXX' // NL // itoa(i) // NL)
 end do
 
 call dialog_close(dialog)
@@ -213,8 +212,7 @@ call dialog_infobox(new_line('a') // 'This is the info box widget.', &
 character(len=32) :: input
 type(dialog_type) :: dialog
 
-call dialog_inputbox(dialog, 'Enter your name:', 7, 32, &
-                     'Alice', title='Name')
+call dialog_inputbox(dialog, 'Enter your name:', 7, 32, 'Alice', title='Name')
 call dialog_read(dialog, input)
 call dialog_close(dialog)
 
@@ -225,6 +223,7 @@ print '("Input: ", a)', trim(input)
 
 ```fortran
 character(len=32) :: renamed
+logical           :: eof
 type(dialog_type) :: dialog
 type(menu_type)   :: menu(3)
 
@@ -236,8 +235,8 @@ call dialog_inputmenu(dialog, 'Input:', 16, 40, size(menu), menu, &
                       no_tags=.true., title='Input Menu')
 
 do
-    call dialog_read(dialog, renamed)
-    if (len_trim(renamed) == 0) exit
+    call dialog_read(dialog, renamed, eof)
+    if (eof) exit
     print '(a)', trim(renamed)
 end do
 
@@ -314,9 +313,9 @@ call dialog_prgbox('Uptime:', 'uptime', 8, 64, title='Prg Box')
 character, parameter :: NL = new_line('a')
 
 call dialog_programbox(dialog, 'Output:', 12, 32, title='Program Box')
-call dialog_write(dialog, 'zzz ... ' // NL)
-call dialog_write(dialog, 'zzz ... ' // NL)
-call dialog_write(dialog, 'zzz ... ' // NL)
+call dialog_write(dialog, 'zzz ...' // NL)
+call dialog_write(dialog, 'zzz ...' // NL)
+call dialog_write(dialog, 'zzz ...' // NL)
 call dialog_close(dialog)
 ```
 
@@ -327,9 +326,9 @@ character, parameter :: NL = new_line('a')
 
 call dialog_progressbox(dialog, 'Output:', 12, 32, title='Progress Box')
 
-call dialog_write(dialog, 'zzz ... ' // NL)
-call dialog_write(dialog, 'zzz ... ' // NL)
-call dialog_write(dialog, 'zzz ... ' // NL)
+call dialog_write(dialog, 'zzz ...' // NL)
+call dialog_write(dialog, 'zzz ...' // NL)
+call dialog_write(dialog, 'zzz ...' // NL)
 call dialog_close(dialog)
 ```
 
