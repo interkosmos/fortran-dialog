@@ -203,7 +203,7 @@ do i = 1, 100
     end select
 
     write (a, '(i0)') i
-    call dialog_write(dialog, 'XXX' // NL // itoa(i) // NL)
+    call dialog_write(dialog, 'XXX' // NL // a // NL)
 end do
 
 call dialog_close(dialog)
