@@ -3,7 +3,7 @@ A work-in-progress wrapper module around [dialog](https://invisible-island.net/d
 to create text user interfaces in Fortran 2008, similar to
 [pythondialog](https://pythondialog.sourceforge.io/) for Python.
 
-Packages of *dialog(1)* are available on most Unix-like operating systems. On
+Packages of *dialog(1)* are available for most Unix-like operating systems. On
 FreeBSD, an older version of dialog is already part of the base system. Install
 the package `devel/cdialog` for an enhanced port:
 
@@ -601,7 +601,9 @@ Copy one of the widget styles to `~/.dialogrc`.
 * Single quotes should be avoided, as they have to be escaped as `"'\''"` in any
   text passed to *dialog(1)* from Fortran.
 * Only the wrapper function `dialog_yesno()` and subroutines with optional dummy
-  argument `exit_stat` return the exit status of *dialog(1)*.
+  argument `exit_stat` return the exit status of *dialog(1)*. The routine
+  `dialog_close()` returns an optional exit status.
+* Dialog proceeding (`--and-widget`) is not supported.
 
 ## Licence
 

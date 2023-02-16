@@ -180,8 +180,8 @@ module dialog
         integer            :: begin_y          = 0
         character(len=32)  :: cancel_label     = ' '
         character          :: column_separator = ' '
-        character(len=32)  :: date_format      = ' '
-        character(len=32)  :: default_button   = ' '
+        character(len=32)  :: date_format      = ' ' ! strftime
+        character(len=8)   :: default_button   = ' ' ! ok, yes, cancel, no, help, extra
         character(len=32)  :: default_item     = ' '
         character(len=32)  :: exit_label       = ' '
         character(len=32)  :: extra_label      = ' '
@@ -195,9 +195,9 @@ module dialog
         integer            :: output_fd        = 0
         character          :: separator        = ' '
         character          :: separate_widget  = ' '
-        integer            :: sleep            = 0
+        integer            :: sleep            = 0   ! in seconds
         integer            :: tab_len          = 0
-        character(len=32)  :: time_format      = ' '
+        character(len=32)  :: time_format      = ' ' ! strftime
         integer            :: timeout          = 0
         character(len=256) :: title            = ' '
         character(len=256) :: trace            = ' '
@@ -459,8 +459,9 @@ contains
     ! WIDGET PROCEDURES
     ! ******************************************************************
     subroutine dialog_buildlist(dialog, text, height, width, list_height, list, &
-            ascii_lines, backtitle, cancel_label, clear, colors, cr_wrap, ok_label, &
-            no_tags, single_quoted, timeout, title, visit_items)
+            ascii_lines, aspect, backtitle, cancel_label, clear, colors, cr_wrap, &
+            ok_label, no_shadow, no_tags, reorder, single_quoted, timeout, title, &
+            visit_items)
         type(dialog_type),       intent(out)          :: dialog
         character(len=*),        intent(in)           :: text
         integer,                 intent(in)           :: height
@@ -468,13 +469,16 @@ contains
         integer,                 intent(in)           :: list_height
         type(list_type), target, intent(inout)        :: list(:)
         logical,                 intent(in), optional :: ascii_lines
+        integer,                 intent(in), optional :: aspect
         character(len=*),        intent(in), optional :: backtitle
         character(len=*),        intent(in), optional :: cancel_label
         logical,                 intent(in), optional :: clear
         logical,                 intent(in), optional :: colors
         logical,                 intent(in), optional :: cr_wrap
+        logical,                 intent(in), optional :: no_shadow
         logical,                 intent(in), optional :: no_tags
         character(len=*),        intent(in), optional :: ok_label
+        logical,                 intent(in), optional :: reorder
         logical,                 intent(in), optional :: single_quoted
         integer,                 intent(in), optional :: timeout
         character(len=*),        intent(in), optional :: title
@@ -486,13 +490,16 @@ contains
         dialog%argument%list => list
 
         if (present(ascii_lines))   call dialog_set_ascii_lines(dialog, ascii_lines)
+        if (present(aspect))        call dialog_set_aspect(dialog, aspect)
         if (present(backtitle))     call dialog_set_backtitle(dialog, backtitle)
         if (present(cancel_label))  call dialog_set_cancel_label(dialog, cancel_label)
         if (present(clear))         call dialog_set_clear(dialog, clear)
         if (present(colors))        call dialog_set_colors(dialog, colors)
         if (present(cr_wrap))       call dialog_set_cr_wrap(dialog, cr_wrap)
+        if (present(no_shadow))     call dialog_set_no_shadow(dialog, no_shadow)
         if (present(no_tags))       call dialog_set_no_tags(dialog, no_tags)
         if (present(ok_label))      call dialog_set_ok_label(dialog, ok_label)
+        if (present(reorder))       call dialog_set_reorder(dialog, reorder)
         if (present(single_quoted)) call dialog_set_single_quoted(dialog, single_quoted)
         if (present(timeout))       call dialog_set_timeout(dialog, timeout)
         if (present(title))         call dialog_set_title(dialog, title)
@@ -502,7 +509,8 @@ contains
     end subroutine dialog_buildlist
 
     subroutine dialog_calendar(dialog, text, height, width, day, month, year, &
-            ascii_lines, backtitle, cancel_label, clear, colors, ok_label, timeout, title)
+            ascii_lines, aspect, backtitle, cancel_label, clear, colors, date_format, &
+            iso_week, no_shadow, ok_label, timeout, title)
         type(dialog_type), intent(out)          :: dialog
         character(len=*),  intent(in)           :: text
         integer,           intent(in)           :: height
@@ -511,10 +519,14 @@ contains
         integer,           intent(in)           :: month
         integer,           intent(in)           :: year
         logical,           intent(in), optional :: ascii_lines
+        integer,           intent(in), optional :: aspect
         character(len=*),  intent(in), optional :: backtitle
         character(len=*),  intent(in), optional :: cancel_label
         logical,           intent(in), optional :: clear
         logical,           intent(in), optional :: colors
+        character(len=*),  intent(in), optional :: date_format
+        logical,           intent(in), optional :: iso_week
+        logical,           intent(in), optional :: no_shadow
         character(len=*),  intent(in), optional :: ok_label
         integer,           intent(in), optional :: timeout
         character(len=*),  intent(in), optional :: title
@@ -526,10 +538,14 @@ contains
         dialog%argument%year  = year
 
         if (present(ascii_lines))  call dialog_set_ascii_lines(dialog, ascii_lines)
+        if (present(aspect))       call dialog_set_aspect(dialog, aspect)
         if (present(backtitle))    call dialog_set_backtitle(dialog, backtitle)
         if (present(cancel_label)) call dialog_set_cancel_label(dialog, cancel_label)
         if (present(clear))        call dialog_set_clear(dialog, clear)
         if (present(colors))       call dialog_set_colors(dialog, colors)
+        if (present(date_format))  call dialog_set_date_format(dialog, date_format)
+        if (present(iso_week))     call dialog_set_iso_week(dialog, iso_week)
+        if (present(no_shadow))    call dialog_set_no_shadow(dialog, no_shadow)
         if (present(ok_label))     call dialog_set_ok_label(dialog, ok_label)
         if (present(timeout))      call dialog_set_timeout(dialog, timeout)
         if (present(title))        call dialog_set_title(dialog, title)
@@ -538,8 +554,9 @@ contains
     end subroutine dialog_calendar
 
     subroutine dialog_checklist(dialog, text, height, width, list_height, list, &
-            ascii_lines, backtitle, cancel_label, clear, colors, cr_wrap, ok_label, &
-            no_tags, single_quoted, timeout, title)
+            ascii_lines, aspect, backtitle, cancel_label, clear, colors, column_separator, &
+            cr_wrap, default_item, ok_label, no_hot_list, no_shadow, no_tags, &
+            single_quoted, timeout, title)
         type(dialog_type),       intent(out)          :: dialog
         character(len=*),        intent(in)           :: text
         integer,                 intent(in)           :: height
@@ -547,11 +564,16 @@ contains
         integer,                 intent(in)           :: list_height
         type(list_type), target, intent(inout)        :: list(:)
         logical,                 intent(in), optional :: ascii_lines
+        integer,                 intent(in), optional :: aspect
         character(len=*),        intent(in), optional :: backtitle
         character(len=*),        intent(in), optional :: cancel_label
         logical,                 intent(in), optional :: clear
         logical,                 intent(in), optional :: colors
+        character,               intent(in), optional :: column_separator
         logical,                 intent(in), optional :: cr_wrap
+        character(len=*),        intent(in), optional :: default_item
+        logical,                 intent(in), optional :: no_hot_list
+        logical,                 intent(in), optional :: no_shadow
         logical,                 intent(in), optional :: no_tags
         character(len=*),        intent(in), optional :: ok_label
         logical,                 intent(in), optional :: single_quoted
@@ -563,32 +585,39 @@ contains
         dialog%argument%list_height = list_height
         dialog%argument%list => list
 
-        if (present(ascii_lines))   call dialog_set_ascii_lines(dialog, ascii_lines)
-        if (present(backtitle))     call dialog_set_backtitle(dialog, backtitle)
-        if (present(cancel_label))  call dialog_set_cancel_label(dialog, cancel_label)
-        if (present(clear))         call dialog_set_clear(dialog, clear)
-        if (present(colors))        call dialog_set_colors(dialog, colors)
-        if (present(cr_wrap))       call dialog_set_cr_wrap(dialog, cr_wrap)
-        if (present(no_tags))       call dialog_set_no_tags(dialog, no_tags)
-        if (present(ok_label))      call dialog_set_ok_label(dialog, ok_label)
-        if (present(single_quoted)) call dialog_set_single_quoted(dialog, single_quoted)
-        if (present(timeout))       call dialog_set_timeout(dialog, timeout)
-        if (present(title))         call dialog_set_title(dialog, title)
+        if (present(ascii_lines))      call dialog_set_ascii_lines(dialog, ascii_lines)
+        if (present(aspect))           call dialog_set_aspect(dialog, aspect)
+        if (present(backtitle))        call dialog_set_backtitle(dialog, backtitle)
+        if (present(cancel_label))     call dialog_set_cancel_label(dialog, cancel_label)
+        if (present(clear))            call dialog_set_clear(dialog, clear)
+        if (present(colors))           call dialog_set_colors(dialog, colors)
+        if (present(column_separator)) call dialog_set_column_separator(dialog, column_separator)
+        if (present(cr_wrap))          call dialog_set_cr_wrap(dialog, cr_wrap)
+        if (present(default_item))     call dialog_set_default_item(dialog, default_item)
+        if (present(no_hot_list))      call dialog_set_no_hot_list(dialog, no_hot_list)
+        if (present(no_shadow))        call dialog_set_no_shadow(dialog, no_shadow)
+        if (present(no_tags))          call dialog_set_no_tags(dialog, no_tags)
+        if (present(ok_label))         call dialog_set_ok_label(dialog, ok_label)
+        if (present(single_quoted))    call dialog_set_single_quoted(dialog, single_quoted)
+        if (present(timeout))          call dialog_set_timeout(dialog, timeout)
+        if (present(title))            call dialog_set_title(dialog, title)
 
         call dialog_open(dialog, PIPE_RDONLY)
     end subroutine dialog_checklist
 
-    subroutine dialog_dselect(dialog, path, height, width, ascii_lines, &
-            backtitle, cancel_label, clear, colors, ok_label, timeout, title)
+    subroutine dialog_dselect(dialog, path, height, width, ascii_lines, aspect, &
+            backtitle, cancel_label, clear, colors, no_shadow, ok_label, timeout, title)
         type(dialog_type), intent(out)          :: dialog
         character(len=*),  intent(in)           :: path
         integer,           intent(in)           :: height
         integer,           intent(in)           :: width
         logical,           intent(in), optional :: ascii_lines
+        integer,           intent(in), optional :: aspect
         character(len=*),  intent(in), optional :: backtitle
         character(len=*),  intent(in), optional :: cancel_label
         logical,           intent(in), optional :: clear
         logical,           intent(in), optional :: colors
+        logical,           intent(in), optional :: no_shadow
         character(len=*),  intent(in), optional :: ok_label
         integer,           intent(in), optional :: timeout
         character(len=*),  intent(in), optional :: title
@@ -596,10 +625,12 @@ contains
         call dialog_create(dialog, WIDGET_DSELECT, path, height, width)
 
         if (present(ascii_lines))  call dialog_set_ascii_lines(dialog, ascii_lines)
+        if (present(aspect))       call dialog_set_aspect(dialog, aspect)
         if (present(backtitle))    call dialog_set_backtitle(dialog, backtitle)
         if (present(cancel_label)) call dialog_set_cancel_label(dialog, cancel_label)
         if (present(clear))        call dialog_set_clear(dialog, clear)
         if (present(colors))       call dialog_set_colors(dialog, colors)
+        if (present(no_shadow))    call dialog_set_no_shadow(dialog, no_shadow)
         if (present(ok_label))     call dialog_set_ok_label(dialog, ok_label)
         if (present(timeout))      call dialog_set_timeout(dialog, timeout)
         if (present(title))        call dialog_set_title(dialog, title)
@@ -607,17 +638,19 @@ contains
         call dialog_open(dialog, PIPE_RDONLY)
     end subroutine dialog_dselect
 
-    subroutine dialog_editbox(dialog, path, height, width, ascii_lines, &
-            backtitle, cancel_label, clear, colors, ok_label, timeout, title)
+    subroutine dialog_editbox(dialog, path, height, width, ascii_lines, aspect, &
+            backtitle, cancel_label, clear, colors, no_shadow, ok_label, timeout, title)
         type(dialog_type), intent(out)          :: dialog
         character(len=*),  intent(in)           :: path
         integer,           intent(in)           :: height
         integer,           intent(in)           :: width
         logical,           intent(in), optional :: ascii_lines
+        integer,           intent(in), optional :: aspect
         character(len=*),  intent(in), optional :: backtitle
         character(len=*),  intent(in), optional :: cancel_label
         logical,           intent(in), optional :: clear
         logical,           intent(in), optional :: colors
+        logical,           intent(in), optional :: no_shadow
         character(len=*),  intent(in), optional :: ok_label
         integer,           intent(in), optional :: timeout
         character(len=*),  intent(in), optional :: title
@@ -625,10 +658,12 @@ contains
         call dialog_create(dialog, WIDGET_EDITBOX, path, height, width)
 
         if (present(ascii_lines))  call dialog_set_ascii_lines(dialog, ascii_lines)
+        if (present(aspect))       call dialog_set_aspect(dialog, aspect)
         if (present(backtitle))    call dialog_set_backtitle(dialog, backtitle)
         if (present(cancel_label)) call dialog_set_cancel_label(dialog, cancel_label)
         if (present(clear))        call dialog_set_clear(dialog, clear)
         if (present(colors))       call dialog_set_colors(dialog, colors)
+        if (present(no_shadow))    call dialog_set_no_shadow(dialog, no_shadow)
         if (present(ok_label))     call dialog_set_ok_label(dialog, ok_label)
         if (present(timeout))      call dialog_set_timeout(dialog, timeout)
         if (present(title))        call dialog_set_title(dialog, title)
@@ -637,8 +672,8 @@ contains
     end subroutine dialog_editbox
 
     subroutine dialog_form(dialog, text, height, width, form_height, form, &
-            ascii_lines, backtitle, cancel_label, clear, colors, cr_wrap, ok_label, &
-            no_tags, single_quoted, timeout, title)
+            ascii_lines, aspect, backtitle, cancel_label, clear, colors, cr_wrap, &
+            default_item, no_shadow, ok_label, no_tags, single_quoted, timeout, title)
         type(dialog_type),       intent(out)          :: dialog
         character(len=*),        intent(in)           :: text
         integer,                 intent(in)           :: height
@@ -646,11 +681,14 @@ contains
         integer,                 intent(in)           :: form_height
         type(form_type), target, intent(inout)        :: form(:)
         logical,                 intent(in), optional :: ascii_lines
+        integer,                 intent(in), optional :: aspect
         character(len=*),        intent(in), optional :: backtitle
         character(len=*),        intent(in), optional :: cancel_label
         logical,                 intent(in), optional :: clear
         logical,                 intent(in), optional :: colors
         logical,                 intent(in), optional :: cr_wrap
+        character(len=*),        intent(in), optional :: default_item
+        logical,                 intent(in), optional :: no_shadow
         logical,                 intent(in), optional :: no_tags
         character(len=*),        intent(in), optional :: ok_label
         logical,                 intent(in), optional :: single_quoted
@@ -663,11 +701,14 @@ contains
         dialog%argument%form => form
 
         if (present(ascii_lines))   call dialog_set_ascii_lines(dialog, ascii_lines)
+        if (present(aspect))        call dialog_set_aspect(dialog, aspect)
         if (present(backtitle))     call dialog_set_backtitle(dialog, backtitle)
         if (present(cancel_label))  call dialog_set_cancel_label(dialog, cancel_label)
         if (present(clear))         call dialog_set_clear(dialog, clear)
         if (present(colors))        call dialog_set_colors(dialog, colors)
         if (present(cr_wrap))       call dialog_set_cr_wrap(dialog, cr_wrap)
+        if (present(default_item))  call dialog_set_default_item(dialog, default_item)
+        if (present(no_shadow))     call dialog_set_no_shadow(dialog, no_shadow)
         if (present(no_tags))       call dialog_set_no_tags(dialog, no_tags)
         if (present(ok_label))      call dialog_set_ok_label(dialog, ok_label)
         if (present(single_quoted)) call dialog_set_single_quoted(dialog, single_quoted)
@@ -678,16 +719,19 @@ contains
     end subroutine dialog_form
 
     subroutine dialog_fselect(dialog, path, height, width, ascii_lines, &
-            backtitle, cancel_label, clear, colors, ok_label, timeout, title)
+            aspect, backtitle, cancel_label, clear, colors, no_shadow, ok_label, &
+            timeout, title)
         type(dialog_type), intent(out)          :: dialog
         character(len=*),  intent(in)           :: path
         integer,           intent(in)           :: height
         integer,           intent(in)           :: width
         logical,           intent(in), optional :: ascii_lines
+        integer,           intent(in), optional :: aspect
         character(len=*),  intent(in), optional :: backtitle
         character(len=*),  intent(in), optional :: cancel_label
         logical,           intent(in), optional :: clear
         logical,           intent(in), optional :: colors
+        logical,           intent(in), optional :: no_shadow
         character(len=*),  intent(in), optional :: ok_label
         integer,           intent(in), optional :: timeout
         character(len=*),  intent(in), optional :: title
@@ -695,10 +739,12 @@ contains
         call dialog_create(dialog, WIDGET_FSELECT, path, height, width)
 
         if (present(ascii_lines))  call dialog_set_ascii_lines(dialog, ascii_lines)
+        if (present(aspect))       call dialog_set_aspect(dialog, aspect)
         if (present(backtitle))    call dialog_set_backtitle(dialog, backtitle)
         if (present(cancel_label)) call dialog_set_cancel_label(dialog, cancel_label)
         if (present(clear))        call dialog_set_clear(dialog, clear)
         if (present(colors))       call dialog_set_colors(dialog, colors)
+        if (present(no_shadow))    call dialog_set_no_shadow(dialog, no_shadow)
         if (present(ok_label))     call dialog_set_ok_label(dialog, ok_label)
         if (present(timeout))      call dialog_set_timeout(dialog, timeout)
         if (present(title))        call dialog_set_title(dialog, title)
@@ -707,16 +753,18 @@ contains
     end subroutine dialog_fselect
 
     subroutine dialog_gauge(dialog, text, height, width, percent, ascii_lines, &
-            backtitle, clear, colors, ok_label, timeout, title)
+            aspect, backtitle, clear, colors, no_shadow, ok_label, timeout, title)
         type(dialog_type), intent(out)          :: dialog
         character(len=*),  intent(in)           :: text
         integer,           intent(in)           :: height
         integer,           intent(in)           :: width
         integer,           intent(in)           :: percent
         logical,           intent(in), optional :: ascii_lines
+        integer,           intent(in), optional :: aspect
         character(len=*),  intent(in), optional :: backtitle
         logical,           intent(in), optional :: clear
         logical,           intent(in), optional :: colors
+        logical,           intent(in), optional :: no_shadow
         character(len=*),  intent(in), optional :: ok_label
         integer,           intent(in), optional :: timeout
         character(len=*),  intent(in), optional :: title
@@ -726,9 +774,11 @@ contains
         dialog%argument%percent = min(100, max(0, percent))
 
         if (present(ascii_lines)) call dialog_set_ascii_lines(dialog, ascii_lines)
+        if (present(aspect))      call dialog_set_aspect(dialog, aspect)
         if (present(backtitle))   call dialog_set_backtitle(dialog, backtitle)
         if (present(clear))       call dialog_set_clear(dialog, clear)
         if (present(colors))      call dialog_set_colors(dialog, colors)
+        if (present(no_shadow))   call dialog_set_no_shadow(dialog, no_shadow)
         if (present(ok_label))    call dialog_set_ok_label(dialog, ok_label)
         if (present(timeout))     call dialog_set_timeout(dialog, timeout)
         if (present(title))       call dialog_set_title(dialog, title)
@@ -737,17 +787,20 @@ contains
     end subroutine dialog_gauge
 
     subroutine dialog_inputbox(dialog, text, height, width, init, ascii_lines, &
-            backtitle, cancel_label, clear, colors, ok_label, timeout, title)
+            aspect, backtitle, cancel_label, clear, colors, no_shadow, ok_label, &
+            timeout, title)
         type(dialog_type), intent(out)          :: dialog
         character(len=*),  intent(in)           :: text
         integer,           intent(in)           :: height
         integer,           intent(in)           :: width
         character(len=*),  intent(in), optional :: init
         logical,           intent(in), optional :: ascii_lines
+        integer,           intent(in), optional :: aspect
         character(len=*),  intent(in), optional :: backtitle
         character(len=*),  intent(in), optional :: cancel_label
         logical,           intent(in), optional :: clear
         logical,           intent(in), optional :: colors
+        logical,           intent(in), optional :: no_shadow
         character(len=*),  intent(in), optional :: ok_label
         integer,           intent(in), optional :: timeout
         character(len=*),  intent(in), optional :: title
@@ -757,10 +810,12 @@ contains
         dialog%argument%init = init
 
         if (present(ascii_lines))  call dialog_set_ascii_lines(dialog, ascii_lines)
+        if (present(aspect))       call dialog_set_aspect(dialog, aspect)
         if (present(backtitle))    call dialog_set_backtitle(dialog, backtitle)
         if (present(cancel_label)) call dialog_set_cancel_label(dialog, cancel_label)
         if (present(clear))        call dialog_set_clear(dialog, clear)
         if (present(colors))       call dialog_set_colors(dialog, colors)
+        if (present(no_shadow))    call dialog_set_no_shadow(dialog, no_shadow)
         if (present(ok_label))     call dialog_set_ok_label(dialog, ok_label)
         if (present(timeout))      call dialog_set_timeout(dialog, timeout)
         if (present(title))        call dialog_set_title(dialog, title)
@@ -768,30 +823,34 @@ contains
         call dialog_open(dialog, PIPE_RDONLY)
     end subroutine dialog_inputbox
 
-    subroutine dialog_infobox(text, height, width, ascii_lines, backtitle, &
-            colors, cr_wrap, no_collapse, title, sleep, exit_stat)
+    subroutine dialog_infobox(text, height, width, ascii_lines, aspect, backtitle, &
+            colors, cr_wrap, no_collapse, no_shadow, title, sleep, exit_stat)
         character(len=*), intent(in)            :: text
         integer,          intent(in)            :: height
         integer,          intent(in)            :: width
         logical,          intent(in),  optional :: ascii_lines
+        integer,          intent(in),  optional :: aspect
         character(len=*), intent(in),  optional :: backtitle
         logical,          intent(in),  optional :: colors
         logical,          intent(in),  optional :: cr_wrap
         logical,          intent(in),  optional :: no_collapse
+        logical,          intent(in),  optional :: no_shadow
         character(len=*), intent(in),  optional :: title
         integer,          intent(in),  optional :: sleep
         integer,          intent(out), optional :: exit_stat
-        integer                                 :: rc
 
+        integer           :: rc
         type(dialog_type) :: dialog
 
         call dialog_create(dialog, WIDGET_INFOBOX, text, height, width)
 
         if (present(ascii_lines)) call dialog_set_ascii_lines(dialog, ascii_lines)
+        if (present(aspect))      call dialog_set_aspect(dialog, aspect)
         if (present(backtitle))   call dialog_set_backtitle(dialog, backtitle)
         if (present(colors))      call dialog_set_colors(dialog, colors)
         if (present(cr_wrap))     call dialog_set_cr_wrap(dialog, cr_wrap)
         if (present(no_collapse)) call dialog_set_no_collapse(dialog, no_collapse)
+        if (present(no_shadow))   call dialog_set_no_shadow(dialog, no_shadow)
         if (present(title))       call dialog_set_title(dialog, title)
         if (present(sleep))       call dialog_set_sleep(dialog, sleep)
 
@@ -800,8 +859,9 @@ contains
     end subroutine dialog_infobox
 
     subroutine dialog_inputmenu(dialog, text, height, width, menu_height, menu, &
-            ascii_lines, backtitle, cancel_label, clear, colors, cr_wrap, ok_label, &
-            no_tags, timeout, title)
+            ascii_lines, aspect, backtitle, cancel_label, clear, colors, &
+            column_separator, cr_wrap, default_item, no_hot_list, no_shadow, no_tags, &
+            ok_label, timeout, title)
         type(dialog_type),       intent(out)          :: dialog
         character(len=*),        intent(in)           :: text
         integer,                 intent(in)           :: height
@@ -809,11 +869,16 @@ contains
         integer,                 intent(in)           :: menu_height
         type(menu_type), target, intent(inout)        :: menu(:)
         logical,                 intent(in), optional :: ascii_lines
+        integer,                 intent(in), optional :: aspect
         character(len=*),        intent(in), optional :: backtitle
         character(len=*),        intent(in), optional :: cancel_label
         logical,                 intent(in), optional :: clear
         logical,                 intent(in), optional :: colors
+        character,               intent(in), optional :: column_separator
         logical,                 intent(in), optional :: cr_wrap
+        character(len=*),        intent(in), optional :: default_item
+        logical,                 intent(in), optional :: no_hot_list
+        logical,                 intent(in), optional :: no_shadow
         logical,                 intent(in), optional :: no_tags
         character(len=*),        intent(in), optional :: ok_label
         integer,                 intent(in), optional :: timeout
@@ -824,23 +889,29 @@ contains
         dialog%argument%menu_height = menu_height
         dialog%argument%menu => menu
 
-        if (present(ascii_lines))  call dialog_set_ascii_lines(dialog, ascii_lines)
-        if (present(backtitle))    call dialog_set_backtitle(dialog, backtitle)
-        if (present(cancel_label)) call dialog_set_cancel_label(dialog, cancel_label)
-        if (present(clear))        call dialog_set_clear(dialog, clear)
-        if (present(colors))       call dialog_set_colors(dialog, colors)
-        if (present(cr_wrap))      call dialog_set_cr_wrap(dialog, cr_wrap)
-        if (present(no_tags))      call dialog_set_no_tags(dialog, no_tags)
-        if (present(ok_label))     call dialog_set_ok_label(dialog, ok_label)
-        if (present(timeout))      call dialog_set_timeout(dialog, timeout)
-        if (present(title))        call dialog_set_title(dialog, title)
+        if (present(ascii_lines))      call dialog_set_ascii_lines(dialog, ascii_lines)
+        if (present(aspect))           call dialog_set_aspect(dialog, aspect)
+        if (present(backtitle))        call dialog_set_backtitle(dialog, backtitle)
+        if (present(cancel_label))     call dialog_set_cancel_label(dialog, cancel_label)
+        if (present(clear))            call dialog_set_clear(dialog, clear)
+        if (present(colors))           call dialog_set_colors(dialog, colors)
+        if (present(column_separator)) call dialog_set_column_separator(dialog, column_separator)
+        if (present(cr_wrap))          call dialog_set_cr_wrap(dialog, cr_wrap)
+        if (present(default_item))     call dialog_set_default_item(dialog, default_item)
+        if (present(no_hot_list))      call dialog_set_no_hot_list(dialog, no_hot_list)
+        if (present(no_shadow))        call dialog_set_no_shadow(dialog, no_shadow)
+        if (present(no_tags))          call dialog_set_no_tags(dialog, no_tags)
+        if (present(ok_label))         call dialog_set_ok_label(dialog, ok_label)
+        if (present(timeout))          call dialog_set_timeout(dialog, timeout)
+        if (present(title))            call dialog_set_title(dialog, title)
 
         call dialog_open(dialog, PIPE_RDONLY)
     end subroutine dialog_inputmenu
 
     subroutine dialog_menu(dialog, text, height, width, menu_height, menu, ascii_lines, &
-            backtitle, cancel_label, clear, colors, cr_wrap, hfile, help_button, hline, &
-            ok_label, no_tags, timeout, title)
+            aspect, backtitle, cancel_label, clear, colors, column_separator, cr_wrap, &
+            default_item, help_button, hfile, hline, no_hot_list, no_shadow, no_tags, &
+            ok_label, timeout, title)
         type(dialog_type),       intent(out)          :: dialog
         character(len=*),        intent(in)           :: text
         integer,                 intent(in)           :: height
@@ -848,14 +919,19 @@ contains
         integer,                 intent(in)           :: menu_height
         type(menu_type), target, intent(inout)        :: menu(:)
         logical,                 intent(in), optional :: ascii_lines
+        integer,                 intent(in), optional :: aspect
         character(len=*),        intent(in), optional :: backtitle
         character(len=*),        intent(in), optional :: cancel_label
         logical,                 intent(in), optional :: clear
         logical,                 intent(in), optional :: colors
+        character,               intent(in), optional :: column_separator
         logical,                 intent(in), optional :: cr_wrap
+        character(len=*),        intent(in), optional :: default_item
         logical,                 intent(in), optional :: help_button
         character(len=*),        intent(in), optional :: hfile
         character(len=*),        intent(in), optional :: hline
+        logical,                 intent(in), optional :: no_hot_list
+        logical,                 intent(in), optional :: no_shadow
         logical,                 intent(in), optional :: no_tags
         character(len=*),        intent(in), optional :: ok_label
         integer,                 intent(in), optional :: timeout
@@ -866,26 +942,31 @@ contains
         dialog%argument%menu_height = menu_height
         dialog%argument%menu => menu
 
-        if (present(ascii_lines))  call dialog_set_ascii_lines(dialog, ascii_lines)
-        if (present(backtitle))    call dialog_set_backtitle(dialog, backtitle)
-        if (present(cancel_label)) call dialog_set_cancel_label(dialog, cancel_label)
-        if (present(clear))        call dialog_set_clear(dialog, clear)
-        if (present(colors))       call dialog_set_colors(dialog, colors)
-        if (present(cr_wrap))      call dialog_set_cr_wrap(dialog, cr_wrap)
-        if (present(help_button))  call dialog_set_help_button(dialog, help_button)
-        if (present(hfile))        call dialog_set_hfile(dialog, hfile)
-        if (present(hline))        call dialog_set_hline(dialog, hline)
-        if (present(no_tags))      call dialog_set_no_tags(dialog, no_tags)
-        if (present(ok_label))     call dialog_set_ok_label(dialog, ok_label)
-        if (present(timeout))      call dialog_set_timeout(dialog, timeout)
-        if (present(title))        call dialog_set_title(dialog, title)
+        if (present(ascii_lines))      call dialog_set_ascii_lines(dialog, ascii_lines)
+        if (present(aspect))           call dialog_set_aspect(dialog, aspect)
+        if (present(backtitle))        call dialog_set_backtitle(dialog, backtitle)
+        if (present(cancel_label))     call dialog_set_cancel_label(dialog, cancel_label)
+        if (present(clear))            call dialog_set_clear(dialog, clear)
+        if (present(colors))           call dialog_set_colors(dialog, colors)
+        if (present(column_separator)) call dialog_set_column_separator(dialog, column_separator)
+        if (present(cr_wrap))          call dialog_set_cr_wrap(dialog, cr_wrap)
+        if (present(default_item))     call dialog_set_default_item(dialog, default_item)
+        if (present(help_button))      call dialog_set_help_button(dialog, help_button)
+        if (present(hfile))            call dialog_set_hfile(dialog, hfile)
+        if (present(hline))            call dialog_set_hline(dialog, hline)
+        if (present(no_hot_list))      call dialog_set_no_hot_list(dialog, no_hot_list)
+        if (present(no_shadow))        call dialog_set_no_shadow(dialog, no_shadow)
+        if (present(no_tags))          call dialog_set_no_tags(dialog, no_tags)
+        if (present(ok_label))         call dialog_set_ok_label(dialog, ok_label)
+        if (present(timeout))          call dialog_set_timeout(dialog, timeout)
+        if (present(title))            call dialog_set_title(dialog, title)
 
         call dialog_open(dialog, PIPE_RDONLY)
     end subroutine dialog_menu
 
     subroutine dialog_mixedform(dialog, text, height, width, form_height, form, &
-            ascii_lines, backtitle, cancel_label, clear, colors, cr_wrap, ok_label, &
-            no_tags, single_quoted, timeout, title)
+            ascii_lines, aspect, backtitle, cancel_label, clear, colors, cr_wrap, &
+            default_item, no_shadow, no_tags, ok_label, single_quoted, timeout, title)
         type(dialog_type),       intent(out)          :: dialog
         character(len=*),        intent(in)           :: text
         integer,                 intent(in)           :: height
@@ -893,11 +974,14 @@ contains
         integer,                 intent(in)           :: form_height
         type(form_type), target, intent(inout)        :: form(:)
         logical,                 intent(in), optional :: ascii_lines
+        integer,                 intent(in), optional :: aspect
         character(len=*),        intent(in), optional :: backtitle
         character(len=*),        intent(in), optional :: cancel_label
         logical,                 intent(in), optional :: clear
         logical,                 intent(in), optional :: colors
         logical,                 intent(in), optional :: cr_wrap
+        character(len=*),        intent(in), optional :: default_item
+        logical,                 intent(in), optional :: no_shadow
         logical,                 intent(in), optional :: no_tags
         character(len=*),        intent(in), optional :: ok_label
         logical,                 intent(in), optional :: single_quoted
@@ -910,11 +994,14 @@ contains
         dialog%argument%form => form
 
         if (present(ascii_lines))   call dialog_set_ascii_lines(dialog, ascii_lines)
+        if (present(aspect))        call dialog_set_aspect(dialog, aspect)
         if (present(backtitle))     call dialog_set_backtitle(dialog, backtitle)
         if (present(cancel_label))  call dialog_set_cancel_label(dialog, cancel_label)
         if (present(clear))         call dialog_set_clear(dialog, clear)
         if (present(colors))        call dialog_set_colors(dialog, colors)
         if (present(cr_wrap))       call dialog_set_cr_wrap(dialog, cr_wrap)
+        if (present(default_item))  call dialog_set_default_item(dialog, default_item)
+        if (present(no_shadow))     call dialog_set_no_shadow(dialog, no_shadow)
         if (present(no_tags))       call dialog_set_no_tags(dialog, no_tags)
         if (present(ok_label))      call dialog_set_ok_label(dialog, ok_label)
         if (present(single_quoted)) call dialog_set_single_quoted(dialog, single_quoted)
@@ -925,20 +1012,25 @@ contains
     end subroutine dialog_mixedform
 
     subroutine dialog_mixedgauge(text, height, width, percent, gauge, ascii_lines, &
-            backtitle, clear, colors, ok_label, timeout, title)
-        character(len=*),         intent(in)           :: text
-        integer,                  intent(in)           :: height
-        integer,                  intent(in)           :: width
-        integer,                  intent(in)           :: percent
-        type(gauge_type), target, intent(inout)        :: gauge(:)
-        logical,                  intent(in), optional :: ascii_lines
-        character(len=*),         intent(in), optional :: backtitle
-        logical,                  intent(in), optional :: clear
-        logical,                  intent(in), optional :: colors
-        character(len=*),         intent(in), optional :: ok_label
-        integer,                  intent(in), optional :: timeout
-        character(len=*),         intent(in), optional :: title
+            aspect, backtitle, clear, colors, no_shadow, ok_label, timeout, title, &
+            exit_stat)
+        character(len=*),         intent(in)            :: text
+        integer,                  intent(in)            :: height
+        integer,                  intent(in)            :: width
+        integer,                  intent(in)            :: percent
+        type(gauge_type), target, intent(inout)         :: gauge(:)
+        logical,                  intent(in),  optional :: ascii_lines
+        integer,                  intent(in),  optional :: aspect
+        character(len=*),         intent(in),  optional :: backtitle
+        logical,                  intent(in),  optional :: clear
+        logical,                  intent(in),  optional :: colors
+        logical,                  intent(in),  optional :: no_shadow
+        character(len=*),         intent(in),  optional :: ok_label
+        integer,                  intent(in),  optional :: timeout
+        character(len=*),         intent(in),  optional :: title
+        integer,                  intent(out), optional :: exit_stat
 
+        integer           :: rc
         type(dialog_type) :: dialog
 
         call dialog_create(dialog, WIDGET_MIXEDGAUGE, text, height, width)
@@ -947,23 +1039,27 @@ contains
         dialog%argument%gauge => gauge
 
         if (present(ascii_lines)) call dialog_set_ascii_lines(dialog, ascii_lines)
+        if (present(aspect))      call dialog_set_aspect(dialog, aspect)
         if (present(backtitle))   call dialog_set_backtitle(dialog, backtitle)
         if (present(clear))       call dialog_set_clear(dialog, clear)
         if (present(colors))      call dialog_set_colors(dialog, colors)
+        if (present(no_shadow))   call dialog_set_no_shadow(dialog, no_shadow)
         if (present(ok_label))    call dialog_set_ok_label(dialog, ok_label)
         if (present(timeout))     call dialog_set_timeout(dialog, timeout)
         if (present(title))       call dialog_set_title(dialog, title)
 
-        call dialog_exec(dialog)
+        call dialog_exec(dialog, rc)
+        if (present(exit_stat)) exit_stat = rc
     end subroutine dialog_mixedgauge
 
-    subroutine dialog_msgbox(text, height, width, ascii_lines, backtitle, cancel_label, &
-            clear, colors, cr_wrap, hfile, hline, no_collapse, ok_label, timeout, title, &
-            exit_stat)
+    subroutine dialog_msgbox(text, height, width, ascii_lines, aspect, backtitle, &
+            cancel_label, clear, colors, cr_wrap, hfile, hline, no_collapse, no_shadow, &
+            ok_label, timeout, title, exit_stat)
         character(len=*), intent(in)            :: text
         integer,          intent(in)            :: height
         integer,          intent(in)            :: width
         logical,          intent(in),  optional :: ascii_lines
+        integer,          intent(in),  optional :: aspect
         character(len=*), intent(in),  optional :: backtitle
         character(len=*), intent(in),  optional :: cancel_label
         logical,          intent(in),  optional :: clear
@@ -972,17 +1068,19 @@ contains
         character(len=*), intent(in),  optional :: hfile
         character(len=*), intent(in),  optional :: hline
         logical,          intent(in),  optional :: no_collapse
+        logical,          intent(in),  optional :: no_shadow
         character(len=*), intent(in),  optional :: ok_label
         integer,          intent(in),  optional :: timeout
         character(len=*), intent(in),  optional :: title
         integer,          intent(out), optional :: exit_stat
-        integer                                 :: rc
 
+        integer           :: rc
         type(dialog_type) :: dialog
 
         call dialog_create(dialog, WIDGET_MSGBOX, text, height, width)
 
         if (present(ascii_lines))  call dialog_set_ascii_lines(dialog, ascii_lines)
+        if (present(aspect))       call dialog_set_aspect(dialog, aspect)
         if (present(backtitle))    call dialog_set_backtitle(dialog, backtitle)
         if (present(cancel_label)) call dialog_set_cancel_label(dialog, cancel_label)
         if (present(clear))        call dialog_set_clear(dialog, clear)
@@ -991,6 +1089,7 @@ contains
         if (present(hfile))        call dialog_set_hfile(dialog, hfile)
         if (present(hline))        call dialog_set_hline(dialog, hline)
         if (present(no_collapse))  call dialog_set_no_collapse(dialog, no_collapse)
+        if (present(no_shadow))    call dialog_set_no_shadow(dialog, no_shadow)
         if (present(ok_label))     call dialog_set_ok_label(dialog, ok_label)
         if (present(timeout))      call dialog_set_timeout(dialog, timeout)
         if (present(title))        call dialog_set_title(dialog, title)
@@ -1000,18 +1099,21 @@ contains
     end subroutine dialog_msgbox
 
     subroutine dialog_passwordbox(dialog, text, height, width, init, ascii_lines, &
-            backtitle, cancel_label, clear, colors, insecure, ok_label, timeout, title)
+            aspect, backtitle, cancel_label, clear, colors, insecure, no_shadow, &
+            ok_label, timeout, title)
         type(dialog_type), intent(out)          :: dialog
         character(len=*),  intent(in)           :: text
         integer,           intent(in)           :: height
         integer,           intent(in)           :: width
         character(len=*),  intent(in), optional :: init
         logical,           intent(in), optional :: ascii_lines
+        integer,           intent(in), optional :: aspect
         character(len=*),  intent(in), optional :: backtitle
         character(len=*),  intent(in), optional :: cancel_label
         logical,           intent(in), optional :: clear
         logical,           intent(in), optional :: colors
         logical,           intent(in), optional :: insecure
+        logical,           intent(in), optional :: no_shadow
         character(len=*),  intent(in), optional :: ok_label
         integer,           intent(in), optional :: timeout
         character(len=*),  intent(in), optional :: title
@@ -1021,11 +1123,13 @@ contains
         dialog%argument%init = init
 
         if (present(ascii_lines))  call dialog_set_ascii_lines(dialog, ascii_lines)
+        if (present(aspect))       call dialog_set_aspect(dialog, aspect)
         if (present(backtitle))    call dialog_set_backtitle(dialog, backtitle)
         if (present(cancel_label)) call dialog_set_cancel_label(dialog, cancel_label)
         if (present(clear))        call dialog_set_clear(dialog, clear)
         if (present(colors))       call dialog_set_colors(dialog, colors)
         if (present(insecure))     call dialog_set_insecure(dialog, insecure)
+        if (present(no_shadow))    call dialog_set_no_shadow(dialog, no_shadow)
         if (present(ok_label))     call dialog_set_ok_label(dialog, ok_label)
         if (present(timeout))      call dialog_set_timeout(dialog, timeout)
         if (present(title))        call dialog_set_title(dialog, title)
@@ -1034,8 +1138,9 @@ contains
     end subroutine dialog_passwordbox
 
     subroutine dialog_passwordform(dialog, text, height, width, form_height, form, &
-            ascii_lines, backtitle, cancel_label, clear, colors, cr_wrap, insecure, &
-            ok_label, no_tags, single_quoted, timeout, title)
+            ascii_lines, aspect, backtitle, cancel_label, clear, colors, cr_wrap, &
+            default_item, insecure, no_shadow, no_tags, ok_label, single_quoted, &
+            timeout, title)
         type(dialog_type),       intent(out)          :: dialog
         character(len=*),        intent(in)           :: text
         integer,                 intent(in)           :: height
@@ -1043,12 +1148,15 @@ contains
         integer,                 intent(in)           :: form_height
         type(form_type), target, intent(inout)        :: form(:)
         logical,                 intent(in), optional :: ascii_lines
+        integer,                 intent(in), optional :: aspect
         character(len=*),        intent(in), optional :: backtitle
         character(len=*),        intent(in), optional :: cancel_label
         logical,                 intent(in), optional :: clear
         logical,                 intent(in), optional :: colors
         logical,                 intent(in), optional :: cr_wrap
+        character(len=*),        intent(in), optional :: default_item
         logical,                 intent(in), optional :: insecure
+        logical,                 intent(in), optional :: no_shadow
         logical,                 intent(in), optional :: no_tags
         character(len=*),        intent(in), optional :: ok_label
         logical,                 intent(in), optional :: single_quoted
@@ -1061,12 +1169,15 @@ contains
         dialog%argument%form => form
 
         if (present(ascii_lines))   call dialog_set_ascii_lines(dialog, ascii_lines)
+        if (present(aspect))        call dialog_set_aspect(dialog, aspect)
         if (present(backtitle))     call dialog_set_backtitle(dialog, backtitle)
         if (present(cancel_label))  call dialog_set_cancel_label(dialog, cancel_label)
         if (present(clear))         call dialog_set_clear(dialog, clear)
         if (present(colors))        call dialog_set_colors(dialog, colors)
         if (present(cr_wrap))       call dialog_set_cr_wrap(dialog, cr_wrap)
+        if (present(default_item))  call dialog_set_default_item(dialog, default_item)
         if (present(insecure))      call dialog_set_insecure(dialog, insecure)
+        if (present(no_shadow))     call dialog_set_no_shadow(dialog, no_shadow)
         if (present(no_tags))       call dialog_set_no_tags(dialog, no_tags)
         if (present(ok_label))      call dialog_set_ok_label(dialog, ok_label)
         if (present(single_quoted)) call dialog_set_single_quoted(dialog, single_quoted)
@@ -1076,22 +1187,24 @@ contains
         call dialog_open(dialog, PIPE_RDONLY)
     end subroutine dialog_passwordform
 
-    subroutine dialog_pause(text, height, width, seconds, ascii_lines, backtitle, &
-            colors, cr_wrap, no_collapse, title, sleep, exit_stat)
+    subroutine dialog_pause(text, height, width, seconds, ascii_lines, aspect, &
+            backtitle, colors, cr_wrap, no_collapse, no_shadow, title, sleep, exit_stat)
         character(len=*), intent(in)            :: text
         integer,          intent(in)            :: height
         integer,          intent(in)            :: width
         integer,          intent(in)            :: seconds
         logical,          intent(in),  optional :: ascii_lines
+        integer,          intent(in),  optional :: aspect
         character(len=*), intent(in),  optional :: backtitle
         logical,          intent(in),  optional :: colors
         logical,          intent(in),  optional :: cr_wrap
         logical,          intent(in),  optional :: no_collapse
+        logical,          intent(in),  optional :: no_shadow
         character(len=*), intent(in),  optional :: title
         integer,          intent(in),  optional :: sleep
         integer,          intent(out), optional :: exit_stat
-        integer                                 :: rc
 
+        integer           :: rc
         type(dialog_type) :: dialog
 
         call dialog_create(dialog, WIDGET_PAUSE, text, height, width)
@@ -1099,10 +1212,12 @@ contains
         dialog%argument%seconds = max(0, seconds)
 
         if (present(ascii_lines)) call dialog_set_ascii_lines(dialog, ascii_lines)
+        if (present(aspect))      call dialog_set_aspect(dialog, aspect)
         if (present(backtitle))   call dialog_set_backtitle(dialog, backtitle)
         if (present(colors))      call dialog_set_colors(dialog, colors)
         if (present(cr_wrap))     call dialog_set_cr_wrap(dialog, cr_wrap)
         if (present(no_collapse)) call dialog_set_no_collapse(dialog, no_collapse)
+        if (present(no_shadow))   call dialog_set_no_shadow(dialog, no_shadow)
         if (present(title))       call dialog_set_title(dialog, title)
         if (present(sleep))       call dialog_set_sleep(dialog, sleep)
 
@@ -1111,15 +1226,17 @@ contains
     end subroutine dialog_pause
 
     subroutine dialog_prgbox(text, command, height, width, ascii_lines, &
-            backtitle, clear, colors, ok_label, timeout, title)
+            aspect, backtitle, clear, colors, no_shadow, ok_label, timeout, title)
         character(len=*),  intent(in)           :: text
         character(len=*),  intent(in)           :: command
         integer,           intent(in)           :: height
         integer,           intent(in)           :: width
         logical,           intent(in), optional :: ascii_lines
+        integer,           intent(in), optional :: aspect
         character(len=*),  intent(in), optional :: backtitle
         logical,           intent(in), optional :: clear
         logical,           intent(in), optional :: colors
+        logical,           intent(in), optional :: no_shadow
         character(len=*),  intent(in), optional :: ok_label
         integer,           intent(in), optional :: timeout
         character(len=*),  intent(in), optional :: title
@@ -1131,9 +1248,11 @@ contains
         dialog%argument%command = command
 
         if (present(ascii_lines)) call dialog_set_ascii_lines(dialog, ascii_lines)
+        if (present(aspect))      call dialog_set_aspect(dialog, aspect)
         if (present(backtitle))   call dialog_set_backtitle(dialog, backtitle)
         if (present(clear))       call dialog_set_clear(dialog, clear)
         if (present(colors))      call dialog_set_colors(dialog, colors)
+        if (present(no_shadow))   call dialog_set_no_shadow(dialog, no_shadow)
         if (present(ok_label))    call dialog_set_ok_label(dialog, ok_label)
         if (present(timeout))     call dialog_set_timeout(dialog, timeout)
         if (present(title))       call dialog_set_title(dialog, title)
@@ -1142,15 +1261,17 @@ contains
     end subroutine dialog_prgbox
 
     subroutine dialog_programbox(dialog, text, height, width, ascii_lines, &
-            backtitle, clear, colors, ok_label, timeout, title)
+            aspect, backtitle, clear, colors, no_shadow, ok_label, timeout, title)
         type(dialog_type), intent(out)          :: dialog
         character(len=*),  intent(in)           :: text
         integer,           intent(in)           :: height
         integer,           intent(in)           :: width
         logical,           intent(in), optional :: ascii_lines
+        integer,           intent(in), optional :: aspect
         character(len=*),  intent(in), optional :: backtitle
         logical,           intent(in), optional :: clear
         logical,           intent(in), optional :: colors
+        logical,           intent(in), optional :: no_shadow
         character(len=*),  intent(in), optional :: ok_label
         integer,           intent(in), optional :: timeout
         character(len=*),  intent(in), optional :: title
@@ -1158,9 +1279,11 @@ contains
         call dialog_create(dialog, WIDGET_PROGRAMBOX, text, height, width)
 
         if (present(ascii_lines)) call dialog_set_ascii_lines(dialog, ascii_lines)
+        if (present(aspect))      call dialog_set_aspect(dialog, aspect)
         if (present(backtitle))   call dialog_set_backtitle(dialog, backtitle)
         if (present(clear))       call dialog_set_clear(dialog, clear)
         if (present(colors))      call dialog_set_colors(dialog, colors)
+        if (present(no_shadow))   call dialog_set_no_shadow(dialog, no_shadow)
         if (present(ok_label))    call dialog_set_ok_label(dialog, ok_label)
         if (present(timeout))     call dialog_set_timeout(dialog, timeout)
         if (present(title))       call dialog_set_title(dialog, title)
@@ -1169,32 +1292,37 @@ contains
     end subroutine dialog_programbox
 
     subroutine dialog_progressbox(dialog, text, height, width, ascii_lines, &
-            backtitle, clear, colors, timeout, title)
+            aspect, backtitle, clear, colors, no_shadow, timeout, title)
         type(dialog_type), intent(out)          :: dialog
         character(len=*),  intent(in)           :: text
         integer,           intent(in)           :: height
         integer,           intent(in)           :: width
         logical,           intent(in), optional :: ascii_lines
+        integer,           intent(in), optional :: aspect
         character(len=*),  intent(in), optional :: backtitle
         logical,           intent(in), optional :: clear
         logical,           intent(in), optional :: colors
+        logical,           intent(in), optional :: no_shadow
         integer,           intent(in), optional :: timeout
         character(len=*),  intent(in), optional :: title
 
         call dialog_create(dialog, WIDGET_PROGRESSBOX, text, height, width)
 
         if (present(ascii_lines)) call dialog_set_ascii_lines(dialog, ascii_lines)
+        if (present(aspect))      call dialog_set_aspect(dialog, aspect)
         if (present(backtitle))   call dialog_set_backtitle(dialog, backtitle)
         if (present(clear))       call dialog_set_clear(dialog, clear)
         if (present(colors))      call dialog_set_colors(dialog, colors)
+        if (present(no_shadow))   call dialog_set_no_shadow(dialog, no_shadow)
         if (present(timeout))     call dialog_set_timeout(dialog, timeout)
         if (present(title))       call dialog_set_title(dialog, title)
 
         call dialog_open(dialog, PIPE_WRONLY)
     end subroutine dialog_progressbox
 
-    subroutine dialog_radiolist(dialog, text, height, width, list_height, list, ascii_lines, &
-            backtitle, cancel_label, clear, colors, cr_wrap, ok_label, no_tags, timeout, title)
+    subroutine dialog_radiolist(dialog, text, height, width, list_height, list, &
+            ascii_lines, aspect, backtitle, cancel_label, clear, colors, &
+            column_separator, cr_wrap, no_shadow, no_tags, ok_label, timeout, title)
         type(dialog_type),       intent(out)          :: dialog
         character(len=*),        intent(in)           :: text
         integer,                 intent(in)           :: height
@@ -1202,11 +1330,14 @@ contains
         integer,                 intent(in)           :: list_height
         type(list_type), target, intent(inout)        :: list(:)
         logical,                 intent(in), optional :: ascii_lines
+        integer,                 intent(in), optional :: aspect
         character(len=*),        intent(in), optional :: backtitle
         character(len=*),        intent(in), optional :: cancel_label
         logical,                 intent(in), optional :: clear
         logical,                 intent(in), optional :: colors
+        character,               intent(in), optional :: column_separator
         logical,                 intent(in), optional :: cr_wrap
+        logical,                 intent(in), optional :: no_shadow
         logical,                 intent(in), optional :: no_tags
         character(len=*),        intent(in), optional :: ok_label
         integer,                 intent(in), optional :: timeout
@@ -1217,23 +1348,26 @@ contains
         dialog%argument%list_height = list_height
         dialog%argument%list => list
 
-        if (present(ascii_lines))  call dialog_set_ascii_lines(dialog, ascii_lines)
-        if (present(backtitle))    call dialog_set_backtitle(dialog, backtitle)
-        if (present(cancel_label)) call dialog_set_cancel_label(dialog, cancel_label)
-        if (present(clear))        call dialog_set_clear(dialog, clear)
-        if (present(colors))       call dialog_set_colors(dialog, colors)
-        if (present(cr_wrap))      call dialog_set_cr_wrap(dialog, cr_wrap)
-        if (present(no_tags))      call dialog_set_no_tags(dialog, no_tags)
-        if (present(ok_label))     call dialog_set_ok_label(dialog, ok_label)
-        if (present(timeout))      call dialog_set_timeout(dialog, timeout)
-        if (present(title))        call dialog_set_title(dialog, title)
+        if (present(ascii_lines))      call dialog_set_ascii_lines(dialog, ascii_lines)
+        if (present(aspect))           call dialog_set_aspect(dialog, aspect)
+        if (present(backtitle))        call dialog_set_backtitle(dialog, backtitle)
+        if (present(cancel_label))     call dialog_set_cancel_label(dialog, cancel_label)
+        if (present(column_separator)) call dialog_set_column_separator(dialog, column_separator)
+        if (present(clear))            call dialog_set_clear(dialog, clear)
+        if (present(colors))           call dialog_set_colors(dialog, colors)
+        if (present(cr_wrap))          call dialog_set_cr_wrap(dialog, cr_wrap)
+        if (present(no_shadow))        call dialog_set_no_shadow(dialog, no_shadow)
+        if (present(no_tags))          call dialog_set_no_tags(dialog, no_tags)
+        if (present(ok_label))         call dialog_set_ok_label(dialog, ok_label)
+        if (present(timeout))          call dialog_set_timeout(dialog, timeout)
+        if (present(title))            call dialog_set_title(dialog, title)
 
         call dialog_open(dialog, PIPE_RDONLY)
     end subroutine dialog_radiolist
 
-    subroutine dialog_rangebox(dialog, text, height, width, min_value, &
-            max_value, default_value, ascii_lines, backtitle, cancel_label, &
-            clear, colors, ok_label, timeout, title)
+    subroutine dialog_rangebox(dialog, text, height, width, min_value, max_value, &
+            default_value, ascii_lines, aspect, backtitle, cancel_label, clear, &
+            colors, no_shadow, ok_label, timeout, title)
         type(dialog_type), intent(out)          :: dialog
         character(len=*),  intent(in)           :: text
         integer,           intent(in)           :: height
@@ -1242,10 +1376,12 @@ contains
         integer,           intent(in)           :: max_value
         integer,           intent(in)           :: default_value
         logical,           intent(in), optional :: ascii_lines
+        integer,           intent(in), optional :: aspect
         character(len=*),  intent(in), optional :: backtitle
         character(len=*),  intent(in), optional :: cancel_label
         logical,           intent(in), optional :: clear
         logical,           intent(in), optional :: colors
+        logical,           intent(in), optional :: no_shadow
         character(len=*),  intent(in), optional :: ok_label
         integer,           intent(in), optional :: timeout
         character(len=*),  intent(in), optional :: title
@@ -1257,10 +1393,12 @@ contains
         dialog%argument%default_value = default_value
 
         if (present(ascii_lines))  call dialog_set_ascii_lines(dialog, ascii_lines)
+        if (present(aspect))       call dialog_set_aspect(dialog, aspect)
         if (present(backtitle))    call dialog_set_backtitle(dialog, backtitle)
         if (present(cancel_label)) call dialog_set_cancel_label(dialog, cancel_label)
         if (present(clear))        call dialog_set_clear(dialog, clear)
         if (present(colors))       call dialog_set_colors(dialog, colors)
+        if (present(no_shadow))    call dialog_set_no_shadow(dialog, no_shadow)
         if (present(ok_label))     call dialog_set_ok_label(dialog, ok_label)
         if (present(timeout))      call dialog_set_timeout(dialog, timeout)
         if (present(title))        call dialog_set_title(dialog, title)
@@ -1268,30 +1406,34 @@ contains
         call dialog_open(dialog, PIPE_RDONLY)
     end subroutine dialog_rangebox
 
-    subroutine dialog_tailbox(file, height, width, ascii_lines, backtitle, &
-            colors, cr_wrap, no_collapse, title, sleep, exit_stat)
+    subroutine dialog_tailbox(file, height, width, ascii_lines, aspect, backtitle, &
+            colors, cr_wrap, no_collapse, no_shadow, title, sleep, exit_stat)
         character(len=*), intent(in)            :: file
         integer,          intent(in)            :: height
         integer,          intent(in)            :: width
         logical,          intent(in),  optional :: ascii_lines
+        integer,          intent(in),  optional :: aspect
         character(len=*), intent(in),  optional :: backtitle
         logical,          intent(in),  optional :: colors
         logical,          intent(in),  optional :: cr_wrap
         logical,          intent(in),  optional :: no_collapse
+        logical,          intent(in),  optional :: no_shadow
         character(len=*), intent(in),  optional :: title
         integer,          intent(in),  optional :: sleep
         integer,          intent(out), optional :: exit_stat
-        integer                                 :: rc
 
+        integer           :: rc
         type(dialog_type) :: dialog
 
         call dialog_create(dialog, WIDGET_TAILBOX, file, height, width)
 
         if (present(ascii_lines)) call dialog_set_ascii_lines(dialog, ascii_lines)
+        if (present(aspect))      call dialog_set_aspect(dialog, aspect)
         if (present(backtitle))   call dialog_set_backtitle(dialog, backtitle)
         if (present(colors))      call dialog_set_colors(dialog, colors)
         if (present(cr_wrap))     call dialog_set_cr_wrap(dialog, cr_wrap)
         if (present(no_collapse)) call dialog_set_no_collapse(dialog, no_collapse)
+        if (present(no_shadow))   call dialog_set_no_shadow(dialog, no_shadow)
         if (present(title))       call dialog_set_title(dialog, title)
         if (present(sleep))       call dialog_set_sleep(dialog, sleep)
 
@@ -1299,30 +1441,34 @@ contains
         if (present(exit_stat)) exit_stat = rc
     end subroutine dialog_tailbox
 
-    subroutine dialog_textbox(file, height, width, ascii_lines, backtitle, &
-            colors, cr_wrap, no_collapse, title, sleep, exit_stat)
+    subroutine dialog_textbox(file, height, width, ascii_lines, aspect, backtitle, &
+            colors, cr_wrap, no_collapse, no_shadow, title, sleep, exit_stat)
         character(len=*), intent(in)            :: file
         integer,          intent(in)            :: height
         integer,          intent(in)            :: width
         logical,          intent(in),  optional :: ascii_lines
+        integer,          intent(in),  optional :: aspect
         character(len=*), intent(in),  optional :: backtitle
         logical,          intent(in),  optional :: colors
         logical,          intent(in),  optional :: cr_wrap
         logical,          intent(in),  optional :: no_collapse
+        logical,          intent(in),  optional :: no_shadow
         character(len=*), intent(in),  optional :: title
         integer,          intent(in),  optional :: sleep
         integer,          intent(out), optional :: exit_stat
-        integer                                 :: rc
 
+        integer           :: rc
         type(dialog_type) :: dialog
 
         call dialog_create(dialog, WIDGET_TEXTBOX, file, height, width)
 
         if (present(ascii_lines)) call dialog_set_ascii_lines(dialog, ascii_lines)
+        if (present(aspect))      call dialog_set_aspect(dialog, aspect)
         if (present(backtitle))   call dialog_set_backtitle(dialog, backtitle)
         if (present(colors))      call dialog_set_colors(dialog, colors)
         if (present(cr_wrap))     call dialog_set_cr_wrap(dialog, cr_wrap)
         if (present(no_collapse)) call dialog_set_no_collapse(dialog, no_collapse)
+        if (present(no_shadow))   call dialog_set_no_shadow(dialog, no_shadow)
         if (present(title))       call dialog_set_title(dialog, title)
         if (present(sleep))       call dialog_set_sleep(dialog, sleep)
 
@@ -1331,7 +1477,8 @@ contains
     end subroutine dialog_textbox
 
     subroutine dialog_timebox(dialog, text, height, width, hour, minute, second, &
-            ascii_lines, backtitle, cancel_label, clear, colors, ok_label, timeout, title)
+            ascii_lines, aspect, backtitle, cancel_label, clear, colors, no_shadow, &
+            ok_label, time_format, timeout, title)
         type(dialog_type), intent(out)          :: dialog
         character(len=*),  intent(in)           :: text
         integer,           intent(in)           :: height
@@ -1340,11 +1487,14 @@ contains
         integer,           intent(in)           :: minute
         integer,           intent(in)           :: second
         logical,           intent(in), optional :: ascii_lines
+        integer,           intent(in), optional :: aspect
         character(len=*),  intent(in), optional :: backtitle
         character(len=*),  intent(in), optional :: cancel_label
         logical,           intent(in), optional :: clear
         logical,           intent(in), optional :: colors
+        logical,           intent(in), optional :: no_shadow
         character(len=*),  intent(in), optional :: ok_label
+        character(len=*),  intent(in), optional :: time_format
         integer,           intent(in), optional :: timeout
         character(len=*),  intent(in), optional :: title
 
@@ -1355,11 +1505,14 @@ contains
         dialog%argument%second = second
 
         if (present(ascii_lines))  call dialog_set_ascii_lines(dialog, ascii_lines)
+        if (present(aspect))       call dialog_set_aspect(dialog, aspect)
         if (present(backtitle))    call dialog_set_backtitle(dialog, backtitle)
         if (present(cancel_label)) call dialog_set_cancel_label(dialog, cancel_label)
         if (present(clear))        call dialog_set_clear(dialog, clear)
         if (present(colors))       call dialog_set_colors(dialog, colors)
+        if (present(no_shadow))    call dialog_set_no_shadow(dialog, no_shadow)
         if (present(ok_label))     call dialog_set_ok_label(dialog, ok_label)
+        if (present(time_format))  call dialog_set_time_format(dialog, time_format)
         if (present(timeout))      call dialog_set_timeout(dialog, timeout)
         if (present(title))        call dialog_set_title(dialog, title)
 
@@ -1367,7 +1520,8 @@ contains
     end subroutine dialog_timebox
 
     subroutine dialog_treeview(dialog, text, height, width, tree_height, tree, ascii_lines, &
-            backtitle, cancel_label, clear, colors, cr_wrap, ok_label, no_tags, timeout, title)
+            aspect, backtitle, cancel_label, clear, colors, cr_wrap, no_shadow, no_tags, &
+            ok_label, timeout, title)
         type(dialog_type),       intent(out)          :: dialog
         character(len=*),        intent(in)           :: text
         integer,                 intent(in)           :: height
@@ -1375,11 +1529,13 @@ contains
         integer,                 intent(in)           :: tree_height
         type(tree_type), target, intent(inout)        :: tree(:)
         logical,                 intent(in), optional :: ascii_lines
+        integer,                 intent(in), optional :: aspect
         character(len=*),        intent(in), optional :: backtitle
         character(len=*),        intent(in), optional :: cancel_label
         logical,                 intent(in), optional :: clear
         logical,                 intent(in), optional :: colors
         logical,                 intent(in), optional :: cr_wrap
+        logical,                 intent(in), optional :: no_shadow
         logical,                 intent(in), optional :: no_tags
         character(len=*),        intent(in), optional :: ok_label
         integer,                 intent(in), optional :: timeout
@@ -1391,11 +1547,13 @@ contains
         dialog%argument%tree => tree
 
         if (present(ascii_lines))  call dialog_set_ascii_lines(dialog, ascii_lines)
+        if (present(aspect))       call dialog_set_aspect(dialog, aspect)
         if (present(backtitle))    call dialog_set_backtitle(dialog, backtitle)
         if (present(cancel_label)) call dialog_set_cancel_label(dialog, cancel_label)
         if (present(clear))        call dialog_set_clear(dialog, clear)
         if (present(colors))       call dialog_set_colors(dialog, colors)
         if (present(cr_wrap))      call dialog_set_cr_wrap(dialog, cr_wrap)
+        if (present(no_shadow))    call dialog_set_no_shadow(dialog, no_shadow)
         if (present(no_tags))      call dialog_set_no_tags(dialog, no_tags)
         if (present(ok_label))     call dialog_set_ok_label(dialog, ok_label)
         if (present(timeout))      call dialog_set_timeout(dialog, timeout)
@@ -1404,13 +1562,15 @@ contains
         call dialog_open(dialog, PIPE_RDONLY)
     end subroutine dialog_treeview
 
-    integer function dialog_yesno(text, height, width, ascii_lines, backtitle, clear, &
-            colors, cr_wrap, default_no, extra_button, extra_label, help_button, help_label, &
-            hfile, hline, no_collapse, no_label, timeout, title, yes_label) result(answer)
+    integer function dialog_yesno(text, height, width, ascii_lines, aspect, backtitle, &
+            clear, colors, cr_wrap, default_no, extra_button, extra_label, help_button, &
+            help_label, hfile, hline, no_collapse, no_label, no_shadow, timeout, title, &
+            yes_label) result(answer)
         character(len=*), intent(in)           :: text
         integer,          intent(in)           :: height
         integer,          intent(in)           :: width
         logical,          intent(in), optional :: ascii_lines
+        integer,          intent(in), optional :: aspect
         character(len=*), intent(in), optional :: backtitle
         logical,          intent(in), optional :: clear
         logical,          intent(in), optional :: colors
@@ -1424,6 +1584,7 @@ contains
         character(len=*), intent(in), optional :: hline
         logical,          intent(in), optional :: no_collapse
         character(len=*), intent(in), optional :: no_label
+        logical,          intent(in), optional :: no_shadow
         integer,          intent(in), optional :: timeout
         character(len=*), intent(in), optional :: title
         character(len=*), intent(in), optional :: yes_label
@@ -1433,6 +1594,7 @@ contains
         call dialog_create(dialog, WIDGET_YESNO, text, height, width)
 
         if (present(ascii_lines))  call dialog_set_ascii_lines(dialog, ascii_lines)
+        if (present(aspect))       call dialog_set_aspect(dialog, aspect)
         if (present(backtitle))    call dialog_set_backtitle(dialog, backtitle)
         if (present(clear))        call dialog_set_clear(dialog, clear)
         if (present(colors))       call dialog_set_colors(dialog, colors)
@@ -1446,6 +1608,7 @@ contains
         if (present(hline))        call dialog_set_hline(dialog, hline)
         if (present(no_collapse))  call dialog_set_no_collapse(dialog, no_collapse)
         if (present(no_label))     call dialog_set_no_label(dialog, no_label)
+        if (present(no_shadow))    call dialog_set_no_shadow(dialog, no_shadow)
         if (present(timeout))      call dialog_set_timeout(dialog, timeout)
         if (present(title))        call dialog_set_title(dialog, title)
         if (present(yes_label))    call dialog_set_yes_label(dialog, yes_label)

@@ -46,7 +46,8 @@ program main
         call dialog_menu(dialog, NL // 'Welcome to the showcase!' // NL // NL // &
                          'Select widget to show:', 18, 52, size(menu), menu, &
                          backtitle='Dialog Showcase', cancel_label='Quit', &
-                         no_tags=.true., ok_label='Show', title='Showcase Menu')
+                         no_tags=.true., no_shadow=.true., ok_label='Show', &
+                         title='Showcase Menu')
         call dialog_read(dialog, selected)
         call dialog_close(dialog, stat)
 
