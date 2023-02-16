@@ -38,7 +38,7 @@ Just set the backend to `Xdialog`.
 | `inputmenu`    | ✓         |
 | `menu`         | ✓         |
 | `mixedform`    | ✓         |
-| `mixedgauge`   |           |
+| `mixedgauge`   | ✓         |
 | `msgbox`       | ✓         |
 | `pause`        | ✓         |
 | `passwordbox`  | ✓         |
@@ -52,7 +52,7 @@ Just set the backend to `Xdialog`.
 | `tailboxbg`    |           |
 | `textbox`      | ✓         |
 | `timebox`      | ✓         |
-| `treeview`     |           |
+| `treeview`     | ✓         |
 | `yesno`        | ✓         |
 
 ## Build Instructions
@@ -97,6 +97,18 @@ Link the example against `libfortran-dialog.a`:
 ```
 $ gfortran -o example example.f90 libfortran-dialog.a
 $ ./example
+```
+
+For a graphical message box, write instead:
+
+```fortran
+! example.f90
+program main
+    use :: dialog
+
+    call dialog_backend('Xdialog')
+    call dialog_msgbox('This is the message box widget.', 10, 30)
+end program main
 ```
 
 ## Further Examples
@@ -356,6 +368,29 @@ print '("Shell: ", a)', trim(shell)
 print '("Group: ", a)', trim(group)
 ```
 
+### mixedgauge
+
+```fortran
+integer          :: i
+type(gauge_type) :: gauge(10)
+
+gauge(1) = gauge_type('Process one',   '0')
+gauge(2) = gauge_type('Process two',   '1')
+gauge(3) = gauge_type('Process three', '2')
+gauge(4) = gauge_type('Process four',  '3')
+gauge(5) = gauge_type('',              '8')
+gauge(6) = gauge_type('Process five',  '5')
+gauge(7) = gauge_type('Process six',   '6')
+gauge(8) = gauge_type('Process seven', '7')
+gauge(9) = gauge_type('Process eight', '4')
+
+do i = 0, 100, 20
+    gauge(10) = gauge_type('Process nine', '-' // itoa(i))
+    call dialog_mixedgauge('Progress:', 20, 64, 33, gauge, title='Mixed Gauge')
+    call sleep(1)
+end do
+```
+
 ### msgbox
 
 ```fortran
@@ -387,8 +422,8 @@ type(form_type)   :: form(2)
 form(1) = form_type('UUID:',     1, 1, '12345',  1, 10, 10, 0)
 form(2) = form_type('Password:', 2, 1, 'secret', 2, 10, 10, 0)
 
-call dialog_passwordform(dialog, 'Set values:', 12, 40, 3, form, ok_label='Submit', &
-                         insecure=.true., title='Password Form')
+call dialog_passwordform(dialog, 'Set values:', 12, 40, 3, form, insecure=.true., &
+                         ok_label='Submit', title='Password Form')
 call dialog_read(dialog, uuid)
 call dialog_read(dialog, password)
 call dialog_close(dialog)
@@ -502,6 +537,25 @@ call dialog_read(dialog, time)
 call dialog_close(dialog)
 
 print '("Time: ", a)', time
+```
+
+### treeview
+
+```fortran
+character(len=32) :: selected
+type(dialog_type) :: dialog
+type(tree_type)   :: tree(4)
+
+tree(1) = tree_type('tag1', 'one',   'off', 0)
+tree(2) = tree_type('tag2', 'two',   'off', 1)
+tree(3) = tree_type('tag3', 'three', 'on',  2)
+tree(4) = tree_type('tag4', 'four',  'off', 1)
+
+call dialog_treeview(dialog, 'Select item:', 0, 0, 0, tree, title='Tree View')
+call dialog_read(dialog, selected)
+call dialog_close(dialog)
+
+print '("Selected: ", a)', trim(selected)
 ```
 
 ### yesno

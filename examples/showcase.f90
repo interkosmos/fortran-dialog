@@ -7,8 +7,9 @@ program main
     character(len=*), parameter :: NL = new_line('a')
 
     character(len=16) :: selected
+    integer           :: stat
     type(dialog_type) :: dialog
-    type(menu_type)   :: menu(26)
+    type(menu_type)   :: menu(28)
 
     menu = [ menu_type('buildlist',    'Build List'), &
              menu_type('calendar',     'Calendar'), &
@@ -23,6 +24,7 @@ program main
              menu_type('inputmenu',    'Input Menu'), &
              menu_type('menu',         'Menu'), &
              menu_type('mixedform',    'Mixed Form'), &
+             menu_type('mixedgauge',   'Mixed Gauge'), &
              menu_type('msgbox',       'Message Box'), &
              menu_type('passwordbox',  'Password Box'), &
              menu_type('passwordform', 'Password Form'), &
@@ -35,6 +37,7 @@ program main
              menu_type('tailbox',      'Tail Box'), &
              menu_type('textbox',      'Text Box'), &
              menu_type('timebox',      'Time Box'), &
+             menu_type('treeview',     'Tree View'), &
              menu_type('yesno',        'Yes/No') ]
 
     call dialog_backend('cdialog')
@@ -44,11 +47,10 @@ program main
                          'Select widget to show:', 18, 52, size(menu), menu, &
                          backtitle='Dialog Showcase', cancel_label='Quit', &
                          no_tags=.true., ok_label='Show', title='Showcase Menu')
-
         call dialog_read(dialog, selected)
-        call dialog_close(dialog)
+        call dialog_close(dialog, stat)
 
-        if (len_trim(selected) == 0) exit
+        if (stat == 256 .or. len_trim(selected) == 0) exit
 
         select case (selected)
             case ('buildlist')
@@ -77,6 +79,8 @@ program main
                 call widget_menu()
             case ('mixedform')
                 call widget_mixedform()
+            case ('mixedgauge')
+                call widget_mixedgauge()
             case ('msgbox')
                 call widget_msgbox()
             case ('passwordbox')
@@ -101,6 +105,8 @@ program main
                 call widget_textbox()
             case ('timebox')
                 call widget_timebox()
+            case ('treeview')
+                call widget_treeview()
             case ('yesno')
                 call widget_yesno()
         end select
@@ -331,6 +337,27 @@ contains
         print '("Group: ", a)', trim(group)
     end subroutine widget_mixedform
 
+    subroutine widget_mixedgauge()
+        integer          :: i
+        type(gauge_type) :: gauge(10)
+
+        gauge(1) = gauge_type('Process one',   '0')
+        gauge(2) = gauge_type('Process two',   '1')
+        gauge(3) = gauge_type('Process three', '2')
+        gauge(4) = gauge_type('Process four',  '3')
+        gauge(5) = gauge_type('',              '8')
+        gauge(6) = gauge_type('Process five',  '5')
+        gauge(7) = gauge_type('Process six',   '6')
+        gauge(8) = gauge_type('Process seven', '7')
+        gauge(9) = gauge_type('Process eight', '4')
+
+        do i = 0, 100, 20
+            gauge(10) = gauge_type('Process nine', '-' // itoa(i))
+            call dialog_mixedgauge('Progress:', 20, 64, 33, gauge, title='Mixed Gauge')
+            call sleep(1)
+        end do
+    end subroutine widget_mixedgauge
+
     subroutine widget_msgbox()
         call dialog_msgbox('This is the message box widget.', 8, 36, title='Message')
     end subroutine widget_msgbox
@@ -355,8 +382,8 @@ contains
         form(1) = form_type('UUID:',     1, 1, '12345',  1, 10, 10, 0)
         form(2) = form_type('Password:', 2, 1, 'secret', 2, 10, 10, 0)
 
-        call dialog_passwordform(dialog, 'Set values:', 12, 40, 3, form, ok_label='Submit', &
-                                 insecure=.true., title='Password Form')
+        call dialog_passwordform(dialog, 'Set values:', 12, 40, 3, form, insecure=.true., &
+                                 ok_label='Submit', title='Password Form')
         call dialog_read(dialog, uuid)
         call dialog_read(dialog, password)
         call dialog_close(dialog)
@@ -368,16 +395,16 @@ contains
     subroutine widget_pause()
         integer :: stat
 
-        call dialog_pause('System reboots in 30 seconds.', 8, 36, 30, &
+        call dialog_pause('System reboots in 10 seconds.', 8, 36, 10, &
                           title='Pause', exit_stat=stat)
 
         select case (stat)
             case (DIALOG_YES)
-                print '("You pressed OK.")'
+                print '("Reboot selected.")'
             case (DIALOG_NO)
-                print '("You pressed Cancel.")'
+                print '("Reboot canceled.")'
             case default
-                print '("You pressed Escape.")'
+                print '("Escape pressed.")'
         end select
     end subroutine widget_pause
 
@@ -456,6 +483,28 @@ contains
 
         call dialog_msgbox('Time: ' // trim(time), 6, 24)
     end subroutine widget_timebox
+
+    subroutine widget_treeview()
+        character(len=32) :: selected
+        type(dialog_type) :: dialog
+        type(tree_type)   :: tree(9)
+
+        tree(1) = tree_type('tag1', 'one',   'off', 0)
+        tree(2) = tree_type('tag2', 'two',   'off', 1)
+        tree(3) = tree_type('tag3', 'three', 'on',  2)
+        tree(4) = tree_type('tag4', 'four',  'off', 1)
+        tree(5) = tree_type('tag5', 'five',  'off', 2)
+        tree(6) = tree_type('tag6', 'six',   'off', 3)
+        tree(7) = tree_type('tag7', 'seven', 'off', 3)
+        tree(8) = tree_type('tag8', 'eight', 'off', 4)
+        tree(9) = tree_type('tag9', 'none',  'off', 1)
+
+        call dialog_treeview(dialog, 'Select item:', 0, 0, 0, tree, title='Tree View')
+        call dialog_read(dialog, selected)
+        call dialog_close(dialog)
+
+        print '("Selected: ", a)', trim(selected)
+    end subroutine widget_treeview
 
     subroutine widget_yesno()
         integer :: ans

@@ -2,7 +2,7 @@
 .SUFFIXES:
 
 FC        = gfortran
-FFLAGS    = -Wno-unused-function -fmax-errors=1
+FFLAGS    = -Wall -Wno-unused-function -fmax-errors=1
 AR        = ar
 ARFLAGS   = rcs
 TARGET    = libfortran-dialog.a
