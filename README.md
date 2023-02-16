@@ -371,6 +371,7 @@ print '("Group: ", a)', trim(group)
 ### mixedgauge
 
 ```fortran
+character(len=4) :: a
 integer          :: i
 type(gauge_type) :: gauge(10)
 
@@ -385,7 +386,8 @@ gauge(8) = gauge_type('Process seven', '7')
 gauge(9) = gauge_type('Process eight', '4')
 
 do i = 0, 100, 20
-    gauge(10) = gauge_type('Process nine', '-' // itoa(i))
+    write (a, '("-", i0)') i
+    gauge(10) = gauge_type('Process nine', a)
     call dialog_mixedgauge('Progress:', 20, 64, 33, gauge, title='Mixed Gauge')
     call sleep(1)
 end do
