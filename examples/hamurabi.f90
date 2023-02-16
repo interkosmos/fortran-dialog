@@ -141,7 +141,7 @@ contains
     subroutine noacre(game)
         type(game_type), intent(inout) :: game
 
-        call dialog_msgbox('Think again. you own only ' // itoa(game%nacres) // &
+        call dialog_msgbox('Think again. You own only ' // itoa(game%nacres) // &
                            ' acres.' // NL // 'Now then, ...', 6, 64, &
                            backtitle=BACKTITLE, title='Hamurabi:')
     end subroutine noacre
@@ -149,7 +149,7 @@ contains
     subroutine nobush(game)
         type(game_type), intent(inout) :: game
 
-        call dialog_msgbox('Think again. you have only ' // itoa(game%storage) // &
+        call dialog_msgbox('Think again. You have only ' // itoa(game%storage) // &
                            ' bushels of grain.' // NL // 'Now then, ...', 6, 64, &
                            backtitle=BACKTITLE, title='Hamurabi:')
     end subroutine nobush
