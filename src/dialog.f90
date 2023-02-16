@@ -142,7 +142,7 @@ module dialog
     type, public :: list_type
         character(len=32)  :: tag    = ' '   !! List item tag.
         character(len=256) :: item   = ' '   !! List item title.
-        character(len=3)   :: status = 'off' !! List item status: `on` of `off`
+        character(len=3)   :: status = 'off' !! List item status: `on` or `off`
     end type list_type
 
     type, public :: menu_type
@@ -250,6 +250,7 @@ module dialog
     public :: dialog_prgbox
     public :: dialog_programbox
     public :: dialog_progressbox
+    public :: dialog_radiolist
     public :: dialog_rangebox
     public :: dialog_tailbox
     public :: dialog_textbox
@@ -962,8 +963,8 @@ contains
     end subroutine dialog_passwordbox
 
     subroutine dialog_passwordform(dialog, text, height, width, form_height, form, &
-            ascii_lines, backtitle, cancel_label, clear, colors, cr_wrap, ok_label, &
-            no_tags, single_quoted, timeout, title)
+            ascii_lines, backtitle, cancel_label, clear, colors, cr_wrap, insecure, &
+            ok_label, no_tags, single_quoted, timeout, title)
         type(dialog_type),       intent(out)          :: dialog
         character(len=*),        intent(in)           :: text
         integer,                 intent(in)           :: height
@@ -976,6 +977,7 @@ contains
         logical,                 intent(in), optional :: clear
         logical,                 intent(in), optional :: colors
         logical,                 intent(in), optional :: cr_wrap
+        logical,                 intent(in), optional :: insecure
         logical,                 intent(in), optional :: no_tags
         character(len=*),        intent(in), optional :: ok_label
         logical,                 intent(in), optional :: single_quoted
@@ -993,6 +995,7 @@ contains
         if (present(clear))         call dialog_clear(dialog, clear)
         if (present(colors))        call dialog_colors(dialog, colors)
         if (present(cr_wrap))       call dialog_cr_wrap(dialog, cr_wrap)
+        if (present(insecure))      call dialog_insecure(dialog, insecure)
         if (present(no_tags))       call dialog_no_tags(dialog, no_tags)
         if (present(ok_label))      call dialog_ok_label(dialog, ok_label)
         if (present(single_quoted)) call dialog_single_quoted(dialog, single_quoted)
@@ -1118,6 +1121,44 @@ contains
 
         call dialog_open(dialog, PIPE_WRONLY)
     end subroutine dialog_progressbox
+
+    subroutine dialog_radiolist(dialog, text, height, width, list_height, list, ascii_lines, &
+            backtitle, cancel_label, clear, colors, cr_wrap, ok_label, no_tags, timeout, title)
+        type(dialog_type),       intent(out)          :: dialog
+        character(len=*),        intent(in)           :: text
+        integer,                 intent(in)           :: height
+        integer,                 intent(in)           :: width
+        integer,                 intent(in)           :: list_height
+        type(list_type), target, intent(inout)        :: list(:)
+        logical,                 intent(in), optional :: ascii_lines
+        character(len=*),        intent(in), optional :: backtitle
+        character(len=*),        intent(in), optional :: cancel_label
+        logical,                 intent(in), optional :: clear
+        logical,                 intent(in), optional :: colors
+        logical,                 intent(in), optional :: cr_wrap
+        logical,                 intent(in), optional :: no_tags
+        character(len=*),        intent(in), optional :: ok_label
+        integer,                 intent(in), optional :: timeout
+        character(len=*),        intent(in), optional :: title
+
+        call dialog_create(dialog, WIDGET_RADIOLIST, text, height, width)
+
+        dialog%argument%list_height = list_height
+        dialog%argument%list => list
+
+        if (present(ascii_lines))  call dialog_ascii_lines(dialog, ascii_lines)
+        if (present(backtitle))    call dialog_backtitle(dialog, backtitle)
+        if (present(cancel_label)) call dialog_cancel_label(dialog, cancel_label)
+        if (present(clear))        call dialog_clear(dialog, clear)
+        if (present(colors))       call dialog_colors(dialog, colors)
+        if (present(cr_wrap))      call dialog_cr_wrap(dialog, cr_wrap)
+        if (present(no_tags))      call dialog_no_tags(dialog, no_tags)
+        if (present(ok_label))     call dialog_ok_label(dialog, ok_label)
+        if (present(timeout))      call dialog_timeout(dialog, timeout)
+        if (present(title))        call dialog_title(dialog, title)
+
+        call dialog_open(dialog, PIPE_RDONLY)
+    end subroutine dialog_radiolist
 
     subroutine dialog_rangebox(dialog, text, height, width, min_value, &
             max_value, default_value, ascii_lines, backtitle, cancel_label, &
@@ -1527,7 +1568,7 @@ contains
         call add_int(dialog%argument%width)
 
         select case (dialog%widget)
-            case (WIDGET_BUILDLIST, WIDGET_CHECKLIST)
+            case (WIDGET_BUILDLIST, WIDGET_CHECKLIST, WIDGET_RADIOLIST)
                 call add_int(dialog%argument%list_height)
 
                 do i = 1, size(dialog%argument%list)

@@ -46,7 +46,7 @@ Just set the backend to `Xdialog`.
 | `prgbox`       | ✓         |
 | `programbox`   | ✓         |
 | `progressbox`  | ✓         |
-| `radiolist`    |           |
+| `radiolist`    | ✓         |
 | `rangebox`     | ✓         |
 | `tailbox`      | ✓         |
 | `tailboxbg`    |           |
@@ -113,7 +113,7 @@ Build the programs with *make*:
 $ make examples
 ```
 
-## Widget Types
+## Widgets
 
 This section lists code snippets in Fortran for the supported *dialog(1)*
 widgets. See the official website for
@@ -144,8 +144,8 @@ print '("Selected items: ", a)', trim(selected)
 character(len=10) :: date
 type(dialog_type) :: dialog
 
-call dialog_calendar(dialog, 'Enter date:', 3, 42, &
-                     day=1, month=1, year=2025, title='Calendar')
+call dialog_calendar(dialog, 'Enter date:', 3, 42, day=1, month=1, year=2025, &
+                     title='Calendar')
 call dialog_read(dialog, date)
 call dialog_close(dialog)
 
@@ -215,7 +215,6 @@ form(3) = form_type('Group:', 3, 1, 'wheel',   3, 10, 10, 0)
 
 call dialog_form(dialog, 'Set user data:', 16, 40, 5, form, &
                  ok_label='Submit', title='Form')
-
 call dialog_read(dialog, user)
 call dialog_read(dialog, shell)
 call dialog_read(dialog, group)
@@ -318,7 +317,7 @@ call dialog_close(dialog)
 ### menu
 
 ```fortran
-character(len=8)  :: selection
+character(len=32) :: selected
 type(dialog_type) :: dialog
 type(menu_type)   :: menu(3)
 
@@ -328,10 +327,10 @@ menu(3) = menu_type('item3', 'Item 3')
 
 call dialog_menu(dialog, 'Select an item:', 16, 40, size(menu), menu, &
                  no_tags=.true., title='Menu Demo')
-call dialog_read(dialog, selection)
+call dialog_read(dialog, selected)
 call dialog_close(dialog)
 
-print '("Selected item: ", a)', trim(selection)
+print '("Selected item: ", a)', trim(selected)
 ```
 
 ### mixedform
@@ -388,8 +387,8 @@ type(form_type)   :: form(2)
 form(1) = form_type('UUID:',     1, 1, '12345',  1, 10, 10, 0)
 form(2) = form_type('Password:', 2, 1, 'secret', 2, 10, 10, 0)
 
-call dialog_passwordform(dialog, 'Set values:', 12, 40, 3, form, &
-                         ok_label='Submit', title='Password Form')
+call dialog_passwordform(dialog, 'Set values:', 12, 40, 3, form, ok_label='Submit', &
+                         insecure=.true., title='Password Form')
 call dialog_read(dialog, uuid)
 call dialog_read(dialog, password)
 call dialog_close(dialog)
@@ -444,6 +443,25 @@ call dialog_write(dialog, 'zzz ...' // NL)
 call dialog_write(dialog, 'zzz ...' // NL)
 call dialog_write(dialog, 'zzz ...' // NL)
 call dialog_close(dialog)
+```
+
+### radiolist
+
+```fortran
+character(len=32) :: selected
+type(dialog_type) :: dialog
+type(list_type)   :: list(3)
+
+list(1) = list_type('item1', 'List Item 1', 'on')
+list(2) = list_type('item2', 'List Item 2')
+list(3) = list_type('item3', 'List Item 3')
+
+call dialog_radiolist(dialog, 'Select items:', 16, 40, 5, list, &
+                      title='Radio List')
+call dialog_read(dialog, selected)
+call dialog_close(dialog)
+
+print '("Selected item: ", a)', trim(selected)
 ```
 
 ### rangebox
@@ -508,7 +526,7 @@ end select
 You can create a new *dialog(1)* theme via:
 
 ```
-$ dialog --create-rc ~/.dialog.rc
+$ dialog --create-rc ~/.dialogrc
 ```
 
 Alter the settings to your liking. In `/usr/local/share/examples/dialog/`,
@@ -520,7 +538,7 @@ you find several pre-defined themes:
 * `suse.rc`
 * `whiptail.rc`
 
-Copy one of the widget styles to `~/.dialog.rc`.
+Copy one of the widget styles to `~/.dialogrc`.
 
 ## Compatiblity
 

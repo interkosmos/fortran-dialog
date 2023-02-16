@@ -8,7 +8,7 @@ program main
 
     character(len=16) :: selected
     type(dialog_type) :: dialog
-    type(menu_type)   :: menu(25)
+    type(menu_type)   :: menu(26)
 
     menu = [ menu_type('buildlist',    'Build List'), &
              menu_type('calendar',     'Calendar'), &
@@ -30,6 +30,7 @@ program main
              menu_type('prgbox',       'Prg Box'), &
              menu_type('programbox',   'Program Box'), &
              menu_type('progressbox',  'Progress Box'), &
+             menu_type('radiolist',    'Radio List'), &
              menu_type('rangebox',     'Range Box'), &
              menu_type('tailbox',      'Tail Box'), &
              menu_type('textbox',      'Text Box'), &
@@ -90,6 +91,8 @@ program main
                 call widget_programbox()
             case ('progressbox')
                 call widget_progressbox()
+            case ('radiolist')
+                call widget_radiolist()
             case ('rangebox')
                 call widget_rangebox()
             case ('tailbox')
@@ -352,8 +355,8 @@ contains
         form(1) = form_type('UUID:',     1, 1, '12345',  1, 10, 10, 0)
         form(2) = form_type('Password:', 2, 1, 'secret', 2, 10, 10, 0)
 
-        call dialog_passwordform(dialog, 'Set values:', 12, 40, 3, form, &
-                                 ok_label='Submit', title='Password Form')
+        call dialog_passwordform(dialog, 'Set values:', 12, 40, 3, form, ok_label='Submit', &
+                                 insecure=.true., title='Password Form')
         call dialog_read(dialog, uuid)
         call dialog_read(dialog, password)
         call dialog_close(dialog)
@@ -404,6 +407,23 @@ contains
 
         call dialog_close(dialog)
     end subroutine widget_progressbox
+
+    subroutine widget_radiolist()
+        character(len=32) :: selected
+        type(dialog_type) :: dialog
+        type(list_type)   :: list(3)
+
+        list(1) = list_type('item1', 'List Item 1', 'on')
+        list(2) = list_type('item2', 'List Item 2')
+        list(3) = list_type('item3', 'List Item 3')
+
+        call dialog_radiolist(dialog, 'Select items:', 16, 40, 5, list, &
+                              title='Radio List')
+        call dialog_read(dialog, selected)
+        call dialog_close(dialog)
+
+        print '("Selected item: ", a)', trim(selected)
+    end subroutine widget_radiolist
 
     subroutine widget_rangebox()
         character(len=2)  :: range
