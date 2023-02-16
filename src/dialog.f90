@@ -8,7 +8,7 @@ module dialog
     private
 
     ! Default dialog binary name.
-    character(len=256), save :: DIALOG_EXECUTABLE = 'dialog'
+    character(len=256), save :: dialog_executable = 'dialog'
 
     ! Public parameters.
     integer, parameter, public :: DIALOG_YES   = 0
@@ -127,6 +127,37 @@ module dialog
     integer, parameter :: C_YES_LABEL        = 66
     integer, parameter :: NCOMMON            = 66
 
+    type, public :: form_type
+        character(len=32)  :: label   = ' '  !! Label string.
+        integer            :: label_y = 0    !! Y position.
+        integer            :: label_x = 0    !! X Position.
+        character(len=256) :: item    = ' '  !! Form value.
+        integer            :: item_y  = 0    !! Y position.
+        integer            :: item_x  = 0    !! X position.
+        integer            :: flen    = 0    !! Field length.
+        integer            :: ilen    = 0    !! Input length.
+        integer            :: itype   = 0    !! Input type (1: hidden, 2: read-only).
+    end type form_type
+
+    type, public :: list_type
+        character(len=32)  :: tag    = ' '   !! List item tag.
+        character(len=256) :: item   = ' '   !! List item title.
+        character(len=3)   :: status = 'off' !! List item status: `on` of `off`
+    end type list_type
+
+    type, public :: menu_type
+        character(len=32)  :: tag  = ' '     !! Menu item tag.
+        character(len=256) :: item = ' '     !! Menu item title.
+    end type menu_type
+
+    integer, parameter :: PIPE_RDONLY = 0
+    integer, parameter :: PIPE_WRONLY = 1
+
+    type :: pipe_type
+        integer     :: mode = PIPE_RDONLY !! Read or write mode.
+        type(c_ptr) :: ptr  = c_null_ptr  !! Pointer to pipe.
+    end type pipe_type
+
     type :: common_type
         integer            :: aspect           = 0
         character(len=256) :: backtitle        = ' '
@@ -159,13 +190,8 @@ module dialog
         character(len=32)  :: yes_label        = ' '
     end type common_type
 
-    type, public :: menu_type
-        character(len=32)  :: tag
-        character(len=256) :: item
-    end type menu_type
-
     type :: argument_type
-        character(len=4096)      :: text          = ' '
+        character(len=2048)      :: text          = ' '
         integer                  :: height        = 0
         integer                  :: width         = 0
         character(len=256)       :: command       = ' '
@@ -181,18 +207,13 @@ module dialog
         integer                  :: hour          = 0
         integer                  :: minute        = 0
         integer                  :: second        = 0
+        integer                  :: form_height   = 0
+        integer                  :: list_height   = 0
         integer                  :: menu_height   = 0
+        type(form_type), pointer :: form(:)       => null()
+        type(list_type), pointer :: list(:)       => null()
         type(menu_type), pointer :: menu(:)       => null()
     end type argument_type
-
-    integer, parameter :: PIPE_RDONLY = 0
-    integer, parameter :: PIPE_WRONLY = 1
-
-    type :: pipe_type
-        private
-        integer     :: mode = PIPE_RDONLY !! Read or write mode.
-        type(c_ptr) :: ptr  = c_null_ptr  !! Pointer to pipe.
-    end type pipe_type
 
     type, public :: dialog_type
         private
@@ -204,22 +225,27 @@ module dialog
         type(pipe_type)     :: pipe
     end type dialog_type
 
+    public :: dialog_backend
     public :: dialog_close
     public :: dialog_read
-    public :: dialog_backend
     public :: dialog_write
 
+    public :: dialog_buildlist
     public :: dialog_calendar
+    public :: dialog_checklist
     public :: dialog_dselect
     public :: dialog_editbox
+    public :: dialog_form
     public :: dialog_fselect
     public :: dialog_gauge
     public :: dialog_infobox
     public :: dialog_inputbox
     public :: dialog_inputmenu
     public :: dialog_menu
+    public :: dialog_mixedform
     public :: dialog_msgbox
     public :: dialog_passwordbox
+    public :: dialog_passwordform
     public :: dialog_pause
     public :: dialog_prgbox
     public :: dialog_programbox
@@ -303,14 +329,6 @@ module dialog
     private :: dialog_yes_label
 
     interface
-        ! int feof(FILE *stream)
-        function c_feof(stream) bind(c, name='feof')
-            import :: c_int, c_ptr
-            implicit none
-            type(c_ptr), intent(in), value :: stream
-            integer(kind=c_int)            :: c_feof
-        end function c_feof
-
         ! char *fgets(char *str, int size, FILE *stream)
         function c_fgets(str, sz, stream) bind(c, name='fgets')
             import :: c_char, c_int, c_ptr
@@ -354,7 +372,7 @@ contains
     subroutine dialog_backend(backend)
         character(len=*), intent(in) :: backend
 
-        if (len_trim(backend) > 0) DIALOG_EXECUTABLE = adjustl(backend)
+        if (len_trim(backend) > 0) dialog_executable = adjustl(backend)
     end subroutine dialog_backend
 
     subroutine dialog_close(dialog)
@@ -382,6 +400,7 @@ contains
         str = ' '
         buf = repeat(c_null_char, len(buf))
         ptr = c_fgets(buf, len(buf), dialog%pipe%ptr)
+
         if (.not. c_associated(ptr)) return
         if (present(eof)) eof = .false.
 
@@ -407,6 +426,49 @@ contains
     ! ******************************************************************
     ! WIDGET PROCEDURES
     ! ******************************************************************
+    subroutine dialog_buildlist(dialog, text, height, width, list_height, list, &
+            ascii_lines, backtitle, cancel_label, clear, colors, cr_wrap, ok_label, &
+            no_tags, single_quoted, timeout, title, visit_items)
+        type(dialog_type),       intent(out)          :: dialog
+        character(len=*),        intent(in)           :: text
+        integer,                 intent(in)           :: height
+        integer,                 intent(in)           :: width
+        integer,                 intent(in)           :: list_height
+        type(list_type), target, intent(inout)        :: list(:)
+        logical,                 intent(in), optional :: ascii_lines
+        character(len=*),        intent(in), optional :: backtitle
+        character(len=*),        intent(in), optional :: cancel_label
+        logical,                 intent(in), optional :: clear
+        logical,                 intent(in), optional :: colors
+        logical,                 intent(in), optional :: cr_wrap
+        logical,                 intent(in), optional :: no_tags
+        character(len=*),        intent(in), optional :: ok_label
+        logical,                 intent(in), optional :: single_quoted
+        integer,                 intent(in), optional :: timeout
+        character(len=*),        intent(in), optional :: title
+        logical,                 intent(in), optional :: visit_items
+
+        call dialog_create(dialog, WIDGET_BUILDLIST, text, height, width)
+
+        dialog%argument%list_height = list_height
+        dialog%argument%list => list
+
+        if (present(ascii_lines))   call dialog_ascii_lines(dialog, ascii_lines)
+        if (present(backtitle))     call dialog_backtitle(dialog, backtitle)
+        if (present(cancel_label))  call dialog_cancel_label(dialog, cancel_label)
+        if (present(clear))         call dialog_clear(dialog, clear)
+        if (present(colors))        call dialog_colors(dialog, colors)
+        if (present(cr_wrap))       call dialog_cr_wrap(dialog, cr_wrap)
+        if (present(no_tags))       call dialog_no_tags(dialog, no_tags)
+        if (present(ok_label))      call dialog_ok_label(dialog, ok_label)
+        if (present(single_quoted)) call dialog_single_quoted(dialog, single_quoted)
+        if (present(timeout))       call dialog_timeout(dialog, timeout)
+        if (present(title))         call dialog_title(dialog, title)
+        if (present(visit_items))   call dialog_visit_items(dialog, visit_items)
+
+        call dialog_open(dialog, PIPE_RDONLY)
+    end subroutine dialog_buildlist
+
     subroutine dialog_calendar(dialog, text, height, width, day, month, year, &
             ascii_lines, backtitle, cancel_label, clear, colors, ok_label, timeout, title)
         type(dialog_type), intent(out)          :: dialog
@@ -442,6 +504,47 @@ contains
 
         call dialog_open(dialog, PIPE_RDONLY)
     end subroutine dialog_calendar
+
+    subroutine dialog_checklist(dialog, text, height, width, list_height, list, &
+            ascii_lines, backtitle, cancel_label, clear, colors, cr_wrap, ok_label, &
+            no_tags, single_quoted, timeout, title)
+        type(dialog_type),       intent(out)          :: dialog
+        character(len=*),        intent(in)           :: text
+        integer,                 intent(in)           :: height
+        integer,                 intent(in)           :: width
+        integer,                 intent(in)           :: list_height
+        type(list_type), target, intent(inout)        :: list(:)
+        logical,                 intent(in), optional :: ascii_lines
+        character(len=*),        intent(in), optional :: backtitle
+        character(len=*),        intent(in), optional :: cancel_label
+        logical,                 intent(in), optional :: clear
+        logical,                 intent(in), optional :: colors
+        logical,                 intent(in), optional :: cr_wrap
+        logical,                 intent(in), optional :: no_tags
+        character(len=*),        intent(in), optional :: ok_label
+        logical,                 intent(in), optional :: single_quoted
+        integer,                 intent(in), optional :: timeout
+        character(len=*),        intent(in), optional :: title
+
+        call dialog_create(dialog, WIDGET_CHECKLIST, text, height, width)
+
+        dialog%argument%list_height = list_height
+        dialog%argument%list => list
+
+        if (present(ascii_lines))   call dialog_ascii_lines(dialog, ascii_lines)
+        if (present(backtitle))     call dialog_backtitle(dialog, backtitle)
+        if (present(cancel_label))  call dialog_cancel_label(dialog, cancel_label)
+        if (present(clear))         call dialog_clear(dialog, clear)
+        if (present(colors))        call dialog_colors(dialog, colors)
+        if (present(cr_wrap))       call dialog_cr_wrap(dialog, cr_wrap)
+        if (present(no_tags))       call dialog_no_tags(dialog, no_tags)
+        if (present(ok_label))      call dialog_ok_label(dialog, ok_label)
+        if (present(single_quoted)) call dialog_single_quoted(dialog, single_quoted)
+        if (present(timeout))       call dialog_timeout(dialog, timeout)
+        if (present(title))         call dialog_title(dialog, title)
+
+        call dialog_open(dialog, PIPE_RDONLY)
+    end subroutine dialog_checklist
 
     subroutine dialog_dselect(dialog, path, height, width, ascii_lines, &
             backtitle, cancel_label, clear, colors, ok_label, timeout, title)
@@ -500,6 +603,47 @@ contains
 
         call dialog_open(dialog, PIPE_RDONLY)
     end subroutine dialog_editbox
+
+    subroutine dialog_form(dialog, text, height, width, form_height, form, &
+            ascii_lines, backtitle, cancel_label, clear, colors, cr_wrap, ok_label, &
+            no_tags, single_quoted, timeout, title)
+        type(dialog_type),       intent(out)          :: dialog
+        character(len=*),        intent(in)           :: text
+        integer,                 intent(in)           :: height
+        integer,                 intent(in)           :: width
+        integer,                 intent(in)           :: form_height
+        type(form_type), target, intent(inout)        :: form(:)
+        logical,                 intent(in), optional :: ascii_lines
+        character(len=*),        intent(in), optional :: backtitle
+        character(len=*),        intent(in), optional :: cancel_label
+        logical,                 intent(in), optional :: clear
+        logical,                 intent(in), optional :: colors
+        logical,                 intent(in), optional :: cr_wrap
+        logical,                 intent(in), optional :: no_tags
+        character(len=*),        intent(in), optional :: ok_label
+        logical,                 intent(in), optional :: single_quoted
+        integer,                 intent(in), optional :: timeout
+        character(len=*),        intent(in), optional :: title
+
+        call dialog_create(dialog, WIDGET_FORM, text, height, width)
+
+        dialog%argument%form_height = form_height
+        dialog%argument%form => form
+
+        if (present(ascii_lines))   call dialog_ascii_lines(dialog, ascii_lines)
+        if (present(backtitle))     call dialog_backtitle(dialog, backtitle)
+        if (present(cancel_label))  call dialog_cancel_label(dialog, cancel_label)
+        if (present(clear))         call dialog_clear(dialog, clear)
+        if (present(colors))        call dialog_colors(dialog, colors)
+        if (present(cr_wrap))       call dialog_cr_wrap(dialog, cr_wrap)
+        if (present(no_tags))       call dialog_no_tags(dialog, no_tags)
+        if (present(ok_label))      call dialog_ok_label(dialog, ok_label)
+        if (present(single_quoted)) call dialog_single_quoted(dialog, single_quoted)
+        if (present(timeout))       call dialog_timeout(dialog, timeout)
+        if (present(title))         call dialog_title(dialog, title)
+
+        call dialog_open(dialog, PIPE_RDONLY)
+    end subroutine dialog_form
 
     subroutine dialog_fselect(dialog, path, height, width, ascii_lines, &
             backtitle, cancel_label, clear, colors, ok_label, timeout, title)
@@ -700,6 +844,47 @@ contains
         call dialog_open(dialog, PIPE_RDONLY)
     end subroutine dialog_menu
 
+    subroutine dialog_mixedform(dialog, text, height, width, form_height, form, &
+            ascii_lines, backtitle, cancel_label, clear, colors, cr_wrap, ok_label, &
+            no_tags, single_quoted, timeout, title)
+        type(dialog_type),       intent(out)          :: dialog
+        character(len=*),        intent(in)           :: text
+        integer,                 intent(in)           :: height
+        integer,                 intent(in)           :: width
+        integer,                 intent(in)           :: form_height
+        type(form_type), target, intent(inout)        :: form(:)
+        logical,                 intent(in), optional :: ascii_lines
+        character(len=*),        intent(in), optional :: backtitle
+        character(len=*),        intent(in), optional :: cancel_label
+        logical,                 intent(in), optional :: clear
+        logical,                 intent(in), optional :: colors
+        logical,                 intent(in), optional :: cr_wrap
+        logical,                 intent(in), optional :: no_tags
+        character(len=*),        intent(in), optional :: ok_label
+        logical,                 intent(in), optional :: single_quoted
+        integer,                 intent(in), optional :: timeout
+        character(len=*),        intent(in), optional :: title
+
+        call dialog_create(dialog, WIDGET_MIXEDFORM, text, height, width)
+
+        dialog%argument%form_height = form_height
+        dialog%argument%form => form
+
+        if (present(ascii_lines))   call dialog_ascii_lines(dialog, ascii_lines)
+        if (present(backtitle))     call dialog_backtitle(dialog, backtitle)
+        if (present(cancel_label))  call dialog_cancel_label(dialog, cancel_label)
+        if (present(clear))         call dialog_clear(dialog, clear)
+        if (present(colors))        call dialog_colors(dialog, colors)
+        if (present(cr_wrap))       call dialog_cr_wrap(dialog, cr_wrap)
+        if (present(no_tags))       call dialog_no_tags(dialog, no_tags)
+        if (present(ok_label))      call dialog_ok_label(dialog, ok_label)
+        if (present(single_quoted)) call dialog_single_quoted(dialog, single_quoted)
+        if (present(timeout))       call dialog_timeout(dialog, timeout)
+        if (present(title))         call dialog_title(dialog, title)
+
+        call dialog_open(dialog, PIPE_RDONLY)
+    end subroutine dialog_mixedform
+
     subroutine dialog_msgbox(text, height, width, ascii_lines, backtitle, cancel_label, &
             clear, colors, cr_wrap, hfile, hline, no_collapse, ok_label, timeout, title, &
             exit_stat)
@@ -775,6 +960,47 @@ contains
 
         call dialog_open(dialog, PIPE_RDONLY)
     end subroutine dialog_passwordbox
+
+    subroutine dialog_passwordform(dialog, text, height, width, form_height, form, &
+            ascii_lines, backtitle, cancel_label, clear, colors, cr_wrap, ok_label, &
+            no_tags, single_quoted, timeout, title)
+        type(dialog_type),       intent(out)          :: dialog
+        character(len=*),        intent(in)           :: text
+        integer,                 intent(in)           :: height
+        integer,                 intent(in)           :: width
+        integer,                 intent(in)           :: form_height
+        type(form_type), target, intent(inout)        :: form(:)
+        logical,                 intent(in), optional :: ascii_lines
+        character(len=*),        intent(in), optional :: backtitle
+        character(len=*),        intent(in), optional :: cancel_label
+        logical,                 intent(in), optional :: clear
+        logical,                 intent(in), optional :: colors
+        logical,                 intent(in), optional :: cr_wrap
+        logical,                 intent(in), optional :: no_tags
+        character(len=*),        intent(in), optional :: ok_label
+        logical,                 intent(in), optional :: single_quoted
+        integer,                 intent(in), optional :: timeout
+        character(len=*),        intent(in), optional :: title
+
+        call dialog_create(dialog, WIDGET_PASSWORDFORM, text, height, width)
+
+        dialog%argument%form_height = form_height
+        dialog%argument%form => form
+
+        if (present(ascii_lines))   call dialog_ascii_lines(dialog, ascii_lines)
+        if (present(backtitle))     call dialog_backtitle(dialog, backtitle)
+        if (present(cancel_label))  call dialog_cancel_label(dialog, cancel_label)
+        if (present(clear))         call dialog_clear(dialog, clear)
+        if (present(colors))        call dialog_colors(dialog, colors)
+        if (present(cr_wrap))       call dialog_cr_wrap(dialog, cr_wrap)
+        if (present(no_tags))       call dialog_no_tags(dialog, no_tags)
+        if (present(ok_label))      call dialog_ok_label(dialog, ok_label)
+        if (present(single_quoted)) call dialog_single_quoted(dialog, single_quoted)
+        if (present(timeout))       call dialog_timeout(dialog, timeout)
+        if (present(title))         call dialog_title(dialog, title)
+
+        call dialog_open(dialog, PIPE_RDONLY)
+    end subroutine dialog_passwordform
 
     subroutine dialog_pause(text, height, width, seconds, ascii_lines, backtitle, &
             colors, cr_wrap, no_collapse, title, sleep, exit_stat)
@@ -1086,7 +1312,7 @@ contains
 
         if (dialog%widget == WIDGET_NONE) return
 
-        dialog%cmd = DIALOG_EXECUTABLE
+        dialog%cmd = dialog_executable
 
         ! Common options.
         if (dialog%options(C_ASCII_LINES)) call add_str('--ascii-lines')
@@ -1301,10 +1527,33 @@ contains
         call add_int(dialog%argument%width)
 
         select case (dialog%widget)
+            case (WIDGET_BUILDLIST, WIDGET_CHECKLIST)
+                call add_int(dialog%argument%list_height)
+
+                do i = 1, size(dialog%argument%list)
+                    call add_str(dialog%argument%list(i)%tag, .true.)
+                    call add_str(dialog%argument%list(i)%item, .true.)
+                    call add_str(dialog%argument%list(i)%status, .false.)
+                end do
+
             case (WIDGET_CALENDAR)
                 call add_int(dialog%argument%day)
                 call add_int(dialog%argument%month)
                 call add_int(dialog%argument%year)
+
+            case (WIDGET_FORM, WIDGET_PASSWORDFORM)
+                call add_int(dialog%argument%form_height)
+
+                do i = 1, size(dialog%argument%form)
+                    call add_str(dialog%argument%form(i)%label, .true.)
+                    call add_int(dialog%argument%form(i)%label_y)
+                    call add_int(dialog%argument%form(i)%label_x)
+                    call add_str(dialog%argument%form(i)%item, .true.)
+                    call add_int(dialog%argument%form(i)%item_y)
+                    call add_int(dialog%argument%form(i)%item_x)
+                    call add_int(dialog%argument%form(i)%flen)
+                    call add_int(dialog%argument%form(i)%ilen)
+                end do
 
             case (WIDGET_GAUGE)
                 call add_int(dialog%argument%percent)
@@ -1319,6 +1568,21 @@ contains
                 do i = 1, size(dialog%argument%menu)
                     call add_str(dialog%argument%menu(i)%tag, .true.)
                     call add_str(dialog%argument%menu(i)%item, .true.)
+                end do
+
+            case (WIDGET_MIXEDFORM)
+                call add_int(dialog%argument%form_height)
+
+                do i = 1, size(dialog%argument%form)
+                    call add_str(dialog%argument%form(i)%label, .true.)
+                    call add_int(dialog%argument%form(i)%label_y)
+                    call add_int(dialog%argument%form(i)%label_x)
+                    call add_str(dialog%argument%form(i)%item, .true.)
+                    call add_int(dialog%argument%form(i)%item_y)
+                    call add_int(dialog%argument%form(i)%item_x)
+                    call add_int(dialog%argument%form(i)%flen)
+                    call add_int(dialog%argument%form(i)%ilen)
+                    call add_int(dialog%argument%form(i)%itype)
                 end do
 
             case (WIDGET_PAUSE)

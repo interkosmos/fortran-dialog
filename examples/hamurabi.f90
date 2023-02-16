@@ -70,9 +70,8 @@ contains
             n = 1
         else
             n = floor(log10(real(abs(i))) + 1)
+            if (i < 0) n = n + 1
         end if
-
-        if (i < 0) n = n + 1
 
         allocate (character(len=n) :: a)
         write (a, '(i0)') i
@@ -176,7 +175,7 @@ contains
                      itoa(game%nstarved) // ' people starved, ' // &
                      itoa(game%immigration) // ' came to the city.' // NL2
 
-            ! A plague strikes! half the population died.
+            ! A plague strikes! Half the population died.
             if (game%plague <= 0) then
                 game%population = game%population / 2
                 report = report // SP // 'A horrible plague struck! Half the people died.' // NL

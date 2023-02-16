@@ -25,24 +25,24 @@ Just set the backend to `Xdialog`.
 
 | Widget         | Supported |
 |----------------|-----------|
-| `buildlist`    |           |
+| `buildlist`    | ✓         |
 | `calendar`     | ✓         |
-| `checklist`    |           |
+| `checklist`    | ✓         |
 | `dselect`      | ✓         |
 | `editbox`      | ✓         |
-| `form`         |           |
+| `form`         | ✓         |
 | `fselect`      | ✓         |
 | `gauge`        | ✓         |
 | `infobox`      | ✓         |
 | `inputbox`     | ✓         |
 | `inputmenu`    | ✓         |
 | `menu`         | ✓         |
-| `mixedform`    |           |
+| `mixedform`    | ✓         |
 | `mixedgauge`   |           |
 | `msgbox`       | ✓         |
 | `pause`        | ✓         |
 | `passwordbox`  | ✓         |
-| `passwordform` |           |
+| `passwordform` | ✓         |
 | `prgbox`       | ✓         |
 | `programbox`   | ✓         |
 | `progressbox`  | ✓         |
@@ -119,6 +119,25 @@ This section lists code snippets in Fortran for the supported *dialog(1)*
 widgets. See the official website for
 [screen shots](https://invisible-island.net/dialog/dialog-figures.html).
 
+### buildlist
+
+```fortran
+character(len=32) :: selected
+type(dialog_type) :: dialog
+type(list_type)   :: list(3)
+
+list(1) = list_type('item1', 'List Item 1', 'on')
+list(2) = list_type('item2', 'List Item 2')
+list(3) = list_type('item3', 'List Item 3')
+
+call dialog_buildlist(dialog, 'Select items:', 16, 40, 5, list, &
+                      title='Build List')
+call dialog_read(dialog, selected)
+call dialog_close(dialog)
+
+print '("Selected items: ", a)', trim(selected)
+```
+
 ### calendar
 
 ```fortran
@@ -131,6 +150,25 @@ call dialog_read(dialog, date)
 call dialog_close(dialog)
 
 print '("Date: ", a)', date
+```
+
+### checklist
+
+```fortran
+character(len=32) :: selected
+type(dialog_type) :: dialog
+type(list_type)   :: list(3)
+
+list(1) = list_type('item1', 'List Item 1', 'on')
+list(2) = list_type('item2', 'List Item 2')
+list(3) = list_type('item3', 'List Item 3')
+
+call dialog_checklist(dialog, 'Select items:', 16, 40, 5, list, &
+                      title='Check List')
+call dialog_read(dialog, selected)
+call dialog_close(dialog)
+
+print '("Selected items: ", a)', trim(selected)
 ```
 
 ### dselect
@@ -162,6 +200,30 @@ do
 end do
 
 call dialog_close(dialog)
+```
+
+### form
+
+```fortran
+character(len=32) :: user, shell, group
+type(dialog_type) :: dialog
+type(form_type)   :: form(3)
+
+form(1) = form_type('User:',  1, 1, 'user',    1, 10, 10, 0)
+form(2) = form_type('Shell:', 2, 1, '/bin/sh', 2, 10, 10, 0)
+form(3) = form_type('Group:', 3, 1, 'wheel',   3, 10, 10, 0)
+
+call dialog_form(dialog, 'Set user data:', 16, 40, 5, form, &
+                 ok_label='Submit', title='Form')
+
+call dialog_read(dialog, user)
+call dialog_read(dialog, shell)
+call dialog_read(dialog, group)
+call dialog_close(dialog)
+
+print '("User:  ", a)', trim(user)
+print '("Shell: ", a)', trim(shell)
+print '("Group: ", a)', trim(group)
 ```
 
 ### fselect
@@ -272,6 +334,29 @@ call dialog_close(dialog)
 print '("Selected item: ", a)', trim(selection)
 ```
 
+### mixedform
+
+```fortran
+character(len=32) :: user, shell, group
+type(dialog_type) :: dialog
+type(form_type)   :: form(3)
+
+form(1) = form_type('User:',  1, 1, 'user',    1, 10, 10, 0, 2)
+form(2) = form_type('Shell:', 2, 1, '/bin/sh', 2, 10, 10, 0, 0)
+form(3) = form_type('Group:', 3, 1, 'wheel',   3, 10, 10, 0, 0)
+
+call dialog_mixedform(dialog, 'Set user data:', 16, 40, 5, form, &
+                      ok_label='Submit', title='Mixed Form')
+call dialog_read(dialog, user)
+call dialog_read(dialog, shell)
+call dialog_read(dialog, group)
+call dialog_close(dialog)
+
+print '("User:  ", a)', trim(user)
+print '("Shell: ", a)', trim(shell)
+print '("Group: ", a)', trim(group)
+```
+
 ### msgbox
 
 ```fortran
@@ -290,6 +375,26 @@ call dialog_passwordbox(dialog, 'Enter password:', 7, 32, &
 call dialog_read(dialog, password)
 call dialog_close(dialog)
 
+print '("Password: ", a)', trim(password)
+```
+
+### passwordform
+
+```fortran
+character(len=32) :: uuid, password
+type(dialog_type) :: dialog
+type(form_type)   :: form(2)
+
+form(1) = form_type('UUID:',     1, 1, '12345',  1, 10, 10, 0)
+form(2) = form_type('Password:', 2, 1, 'secret', 2, 10, 10, 0)
+
+call dialog_passwordform(dialog, 'Set values:', 12, 40, 3, form, &
+                         ok_label='Submit', title='Password Form')
+call dialog_read(dialog, uuid)
+call dialog_read(dialog, password)
+call dialog_close(dialog)
+
+print '("UUID:     ", a)', trim(uuid)
 print '("Password: ", a)', trim(password)
 ```
 

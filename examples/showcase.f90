@@ -8,30 +8,35 @@ program main
 
     character(len=16) :: selected
     type(dialog_type) :: dialog
-    type(menu_type)   :: menu(20)
+    type(menu_type)   :: menu(25)
 
-    menu = [ menu_type('calendar',    'Calendar'), &
-             menu_type('dselect',     'Directory Select'), &
-             menu_type('editbox',     'Edit Box'), &
-             menu_type('fselect',     'File Select'), &
-             menu_type('gauge',       'Gauge'), &
-             menu_type('infobox',     'Info Box'), &
-             menu_type('inputbox',    'Input Box'), &
-             menu_type('inputmenu',   'Input Menu'), &
-             menu_type('menu',        'Menu'), &
-             menu_type('msgbox',      'Message Box'), &
-             menu_type('passwordbox', 'Password Box'), &
-             menu_type('pause',       'Pause'), &
-             menu_type('prgbox',      'Prg Box'), &
-             menu_type('programbox',  'Program Box'), &
-             menu_type('progressbox', 'Progress Box'), &
-             menu_type('rangebox',    'Range Box'), &
-             menu_type('tailbox',     'Tail Box'), &
-             menu_type('textbox',     'Text Box'), &
-             menu_type('timebox',     'Time Box'), &
-             menu_type('yesno',       'Yes/No') ]
+    menu = [ menu_type('buildlist',    'Build List'), &
+             menu_type('calendar',     'Calendar'), &
+             menu_type('checklist',    'Check List'), &
+             menu_type('dselect',      'Directory Select'), &
+             menu_type('editbox',      'Edit Box'), &
+             menu_type('form',         'Form'), &
+             menu_type('fselect',      'File Select'), &
+             menu_type('gauge',        'Gauge'), &
+             menu_type('infobox',      'Info Box'), &
+             menu_type('inputbox',     'Input Box'), &
+             menu_type('inputmenu',    'Input Menu'), &
+             menu_type('menu',         'Menu'), &
+             menu_type('mixedform',    'Mixed Form'), &
+             menu_type('msgbox',       'Message Box'), &
+             menu_type('passwordbox',  'Password Box'), &
+             menu_type('passwordform', 'Password Form'), &
+             menu_type('pause',        'Pause'), &
+             menu_type('prgbox',       'Prg Box'), &
+             menu_type('programbox',   'Program Box'), &
+             menu_type('progressbox',  'Progress Box'), &
+             menu_type('rangebox',     'Range Box'), &
+             menu_type('tailbox',      'Tail Box'), &
+             menu_type('textbox',      'Text Box'), &
+             menu_type('timebox',      'Time Box'), &
+             menu_type('yesno',        'Yes/No') ]
 
-    call dialog_backend('dialog')
+    call dialog_backend('cdialog')
 
     do
         call dialog_menu(dialog, NL // 'Welcome to the showcase!' // NL // NL // &
@@ -45,12 +50,18 @@ program main
         if (len_trim(selected) == 0) exit
 
         select case (selected)
+            case ('buildlist')
+                call widget_buildlist()
             case ('calendar')
                 call widget_calendar()
+            case ('checklist')
+                call widget_checklist()
             case ('dselect')
                 call widget_dselect()
             case ('editbox')
                 call widget_editbox()
+            case ('form')
+                call widget_form()
             case ('fselect')
                 call widget_fselect()
             case ('gauge')
@@ -63,10 +74,14 @@ program main
                 call widget_inputmenu()
             case ('menu')
                 call widget_menu()
+            case ('mixedform')
+                call widget_mixedform()
             case ('msgbox')
                 call widget_msgbox()
             case ('passwordbox')
                 call widget_passwordbox()
+            case ('passwordform')
+                call widget_passwordform()
             case ('pause')
                 call widget_pause()
             case ('prgbox')
@@ -98,13 +113,29 @@ contains
             n = 1
         else
             n = floor(log10(real(abs(i))) + 1)
+            if (i < 0) n = n + 1
         end if
-
-        if (i < 0) n = n + 1
 
         allocate (character(len=n) :: a)
         write (a, '(i0)') i
     end function itoa
+
+    subroutine widget_buildlist()
+        character(len=32) :: selected
+        type(dialog_type) :: dialog
+        type(list_type)   :: list(3)
+
+        list(1) = list_type('item1', 'List Item 1', 'on')
+        list(2) = list_type('item2', 'List Item 2')
+        list(3) = list_type('item3', 'List Item 3')
+
+        call dialog_buildlist(dialog, 'Select items:', 16, 40, 5, list, &
+                              title='Build List')
+        call dialog_read(dialog, selected)
+        call dialog_close(dialog)
+
+        print '("Selected items: ", a)', trim(selected)
+    end subroutine widget_buildlist
 
     subroutine widget_calendar()
         character(len=10) :: date
@@ -117,6 +148,23 @@ contains
 
         print '("Date: ", a)', date
     end subroutine widget_calendar
+
+    subroutine widget_checklist()
+        character(len=32) :: selected
+        type(dialog_type) :: dialog
+        type(list_type)   :: list(3)
+
+        list(1) = list_type('item1', 'List Item 1', 'on')
+        list(2) = list_type('item2', 'List Item 2')
+        list(3) = list_type('item3', 'List Item 3')
+
+        call dialog_checklist(dialog, 'Select items:', 16, 40, 5, list, &
+                              title='Check List')
+        call dialog_read(dialog, selected)
+        call dialog_close(dialog)
+
+        print '("Selected items: ", a)', trim(selected)
+    end subroutine widget_checklist
 
     subroutine widget_dselect()
         character(len=512) :: path
@@ -144,6 +192,27 @@ contains
 
         call dialog_close(dialog)
     end subroutine widget_editbox
+
+    subroutine widget_form()
+        character(len=32) :: user, shell, group
+        type(dialog_type) :: dialog
+        type(form_type)   :: form(3)
+
+        form(1) = form_type('User:',  1, 1, 'user',    1, 10, 10, 0)
+        form(2) = form_type('Shell:', 2, 1, '/bin/sh', 2, 10, 10, 0)
+        form(3) = form_type('Group:', 3, 1, 'wheel',   3, 10, 10, 0)
+
+        call dialog_form(dialog, 'Set user data:', 16, 40, 5, form, &
+                         ok_label='Submit', title='Form')
+        call dialog_read(dialog, user)
+        call dialog_read(dialog, shell)
+        call dialog_read(dialog, group)
+        call dialog_close(dialog)
+
+        print '("User:  ", a)', trim(user)
+        print '("Shell: ", a)', trim(shell)
+        print '("Group: ", a)', trim(group)
+    end subroutine widget_form
 
     subroutine widget_fselect()
         character(len=512) :: path
@@ -193,7 +262,6 @@ contains
 
         call dialog_inputbox(dialog, 'Enter your name:', 7, 32, &
                              'Alice', title='Name')
-
         call dialog_read(dialog, name)
         call dialog_close(dialog)
 
@@ -223,7 +291,7 @@ contains
     end subroutine widget_inputmenu
 
     subroutine widget_menu()
-        character(len=8)  :: selection
+        character(len=8)  :: selected
         type(dialog_type) :: dialog
         type(menu_type)   :: menu(3)
 
@@ -233,12 +301,32 @@ contains
 
         call dialog_menu(dialog, 'Select an item:', 16, 40, size(menu), menu, &
                          no_tags=.true., title='Menu Demo')
-
-        call dialog_read(dialog, selection)
+        call dialog_read(dialog, selected)
         call dialog_close(dialog)
 
-        print '("Selected item: ", a)', trim(selection)
+        print '("Selected item: ", a)', trim(selected)
     end subroutine widget_menu
+
+    subroutine widget_mixedform()
+        character(len=32) :: user, shell, group
+        type(dialog_type) :: dialog
+        type(form_type)   :: form(3)
+
+        form(1) = form_type('User:',  1, 1, 'user',    1, 10, 10, 0, 2)
+        form(2) = form_type('Shell:', 2, 1, '/bin/sh', 2, 10, 10, 0, 0)
+        form(3) = form_type('Group:', 3, 1, 'wheel',   3, 10, 10, 0, 0)
+
+        call dialog_mixedform(dialog, 'Set user data:', 16, 40, 5, form, &
+                              ok_label='Submit', title='Mixed Form')
+        call dialog_read(dialog, user)
+        call dialog_read(dialog, shell)
+        call dialog_read(dialog, group)
+        call dialog_close(dialog)
+
+        print '("User:  ", a)', trim(user)
+        print '("Shell: ", a)', trim(shell)
+        print '("Group: ", a)', trim(group)
+    end subroutine widget_mixedform
 
     subroutine widget_msgbox()
         call dialog_msgbox('This is the message box widget.', 8, 36, title='Message')
@@ -250,12 +338,29 @@ contains
 
         call dialog_passwordbox(dialog, 'Enter password:', 7, 32, &
                                 insecure=.true., title='Password')
-
         call dialog_read(dialog, password)
         call dialog_close(dialog)
 
         print '("Password: ", a)', trim(password)
     end subroutine widget_passwordbox
+
+    subroutine widget_passwordform()
+        character(len=32) :: uuid, password
+        type(dialog_type) :: dialog
+        type(form_type)   :: form(2)
+
+        form(1) = form_type('UUID:',     1, 1, '12345',  1, 10, 10, 0)
+        form(2) = form_type('Password:', 2, 1, 'secret', 2, 10, 10, 0)
+
+        call dialog_passwordform(dialog, 'Set values:', 12, 40, 3, form, &
+                                 ok_label='Submit', title='Password Form')
+        call dialog_read(dialog, uuid)
+        call dialog_read(dialog, password)
+        call dialog_close(dialog)
+
+        print '("UUID:     ", a)', trim(uuid)
+        print '("Password: ", a)', trim(password)
+    end subroutine widget_passwordform
 
     subroutine widget_pause()
         integer :: stat
@@ -281,7 +386,6 @@ contains
         type(dialog_type) :: dialog
 
         call dialog_programbox(dialog, 'Output:', 12, 32, title='Program Box')
-
         call dialog_write(dialog, 'zzz ...' // NL)
         call dialog_write(dialog, 'zzz ...' // NL)
         call dialog_write(dialog, 'zzz ...' // NL)
@@ -327,7 +431,6 @@ contains
 
         call dialog_timebox(dialog, 'Enter time:', 3, 32, &
                             hour=16, minute=30, second=0, title='Time')
-
         call dialog_read(dialog, time)
         call dialog_close(dialog)
 
