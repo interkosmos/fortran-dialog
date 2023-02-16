@@ -14,7 +14,7 @@ the package `devel/cdialog` for an enhanced port:
 In Fortran, change the backend to `cdialog` before calling any dialog routines:
 
 ```fortran
-call dialog_set_binary('cdialog')
+call dialog_backend('cdialog')
 ```
 
 The basic widgets are compatible to [Xdialog](http://xdialog.free.fr/) as well.
@@ -107,7 +107,8 @@ $ make examples
 ## Widget Types
 
 This section lists code snippets in Fortran for the supported *dialog(1)*
-widgets.
+widgets. See the official website for
+[screen shots](https://invisible-island.net/dialog/dialog-figures.html).
 
 ### calendar
 
@@ -325,7 +326,6 @@ call dialog_close(dialog)
 character, parameter :: NL = new_line('a')
 
 call dialog_progressbox(dialog, 'Output:', 12, 32, title='Progress Box')
-
 call dialog_write(dialog, 'zzz ...' // NL)
 call dialog_write(dialog, 'zzz ...' // NL)
 call dialog_write(dialog, 'zzz ...' // NL)
@@ -338,8 +338,8 @@ call dialog_close(dialog)
 character(len=2)  :: range
 type(dialog_type) :: dialog
 
-call dialog_rangebox(dialog, 'Select range with PGUP/PGDOWN:', 7, 32, &
-                     min_value=0, max_value=42, default_value=21, title='Demo')
+call dialog_rangebox(dialog, 'Select range with PGUP/PGDOWN:', 7, 32, min_value=0, max_value=42, &
+                     default_value=21, title='Range Box')
 call dialog_read(dialog, range)
 call dialog_close(dialog)
 
@@ -364,8 +364,8 @@ call dialog_textbox('./examples/wumpus.f90', 18, 72, title='Text Box')
 character(len=8)  :: time
 type(dialog_type) :: dialog
 
-call dialog_inputbox(dialog, 'Enter time:', 7, 32, &
-                     hour=12, minute=0, second=0, title='Name')
+call dialog_inputbox(dialog, 'Enter time:', 7, 32, hour=12, minute=0, second=0, &
+                     title='Time')
 call dialog_read(dialog, time)
 call dialog_close(dialog)
 

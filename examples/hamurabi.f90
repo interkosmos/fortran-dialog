@@ -41,7 +41,7 @@ program hamurabi
     type(game_type) :: game
 
     call random_seed()
-    call dialog_set_binary('dialog')
+    call dialog_backend('dialog')
     call title()
     call play(game)
 contains

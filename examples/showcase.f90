@@ -11,27 +11,27 @@ program main
     type(menu_type)   :: menu(20)
 
     menu = [ menu_type('calendar',    'Calendar'), &
-             menu_type('dselect',     'Directory select'), &
-             menu_type('editbox',     'Edit box'), &
-             menu_type('fselect',     'File select'), &
+             menu_type('dselect',     'Directory Select'), &
+             menu_type('editbox',     'Edit Box'), &
+             menu_type('fselect',     'File Select'), &
              menu_type('gauge',       'Gauge'), &
-             menu_type('infobox',     'Info box'), &
-             menu_type('inputbox',    'Input box'), &
-             menu_type('inputmenu',   'Input menu'), &
+             menu_type('infobox',     'Info Box'), &
+             menu_type('inputbox',    'Input Box'), &
+             menu_type('inputmenu',   'Input Menu'), &
              menu_type('menu',        'Menu'), &
-             menu_type('msgbox',      'Message box'), &
-             menu_type('passwordbox', 'Password box'), &
+             menu_type('msgbox',      'Message Box'), &
+             menu_type('passwordbox', 'Password Box'), &
              menu_type('pause',       'Pause'), &
-             menu_type('prgbox',      'Prg box'), &
-             menu_type('programbox',  'Program box'), &
-             menu_type('progressbox', 'Progress box'), &
-             menu_type('rangebox',    'Range box'), &
-             menu_type('tailbox',     'Tail box'), &
-             menu_type('textbox',     'Text box'), &
-             menu_type('timebox',     'Time box'), &
-             menu_type('yesno',       'Yes/no dialog') ]
+             menu_type('prgbox',      'Prg Box'), &
+             menu_type('programbox',  'Program Box'), &
+             menu_type('progressbox', 'Progress Box'), &
+             menu_type('rangebox',    'Range Box'), &
+             menu_type('tailbox',     'Tail Box'), &
+             menu_type('textbox',     'Text Box'), &
+             menu_type('timebox',     'Time Box'), &
+             menu_type('yesno',       'Yes/No') ]
 
-    call dialog_set_binary('dialog')
+    call dialog_backend('dialog')
 
     do
         call dialog_menu(dialog, NL // 'Welcome to the showcase!' // NL // NL // &
@@ -122,7 +122,7 @@ contains
         character(len=512) :: path
         type(dialog_type)  :: dialog
 
-        call dialog_dselect(dialog, '/', 18, 72, title='Select Directory')
+        call dialog_dselect(dialog, '/', 8, 72, title='Select Directory')
         call dialog_read(dialog, path)
         call dialog_close(dialog)
 
@@ -149,7 +149,7 @@ contains
         character(len=512) :: path
         type(dialog_type)  :: dialog
 
-        call dialog_fselect(dialog, '/', 18, 72, title='Select File')
+        call dialog_fselect(dialog, '/', 8, 72, title='Select File')
         call dialog_read(dialog, path)
         call dialog_close(dialog)
 
@@ -210,7 +210,7 @@ contains
         menu(2) = menu_type('item2', 'Item 2')
         menu(3) = menu_type('item3', 'Item 3')
 
-        call dialog_inputmenu(dialog, 'Input:', 16, 40, size(menu), menu, &
+        call dialog_inputmenu(dialog, 'Input:', 18, 40, size(menu), menu, &
                               no_tags=.true., title='Input Menu Demo')
 
         do
@@ -325,7 +325,7 @@ contains
         character(len=32) :: time
         type(dialog_type) :: dialog
 
-        call dialog_timebox(dialog, 'Enter time:', 7, 32, &
+        call dialog_timebox(dialog, 'Enter time:', 3, 32, &
                             hour=16, minute=30, second=0, title='Time')
 
         call dialog_read(dialog, time)

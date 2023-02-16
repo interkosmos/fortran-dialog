@@ -8,7 +8,7 @@ module dialog
     private
 
     ! Default dialog binary name.
-    character(len=256), save :: DIALOG_BINARY = 'dialog'
+    character(len=256), save :: DIALOG_EXECUTABLE = 'dialog'
 
     ! Public parameters.
     integer, parameter, public :: DIALOG_YES   = 0
@@ -206,7 +206,7 @@ module dialog
 
     public :: dialog_close
     public :: dialog_read
-    public :: dialog_set_binary
+    public :: dialog_backend
     public :: dialog_write
 
     public :: dialog_calendar
@@ -351,6 +351,12 @@ contains
     ! ******************************************************************
     ! PUBLIC PROCEDURES
     ! ******************************************************************
+    subroutine dialog_backend(backend)
+        character(len=*), intent(in) :: backend
+
+        if (len_trim(backend) > 0) DIALOG_EXECUTABLE = adjustl(backend)
+    end subroutine dialog_backend
+
     subroutine dialog_close(dialog)
         type(dialog_type), intent(inout) :: dialog
         integer                          :: rc
@@ -387,12 +393,6 @@ contains
         if (buf(j:j) == c_new_line) j = j - 1
         str(1:j) = buf(1:j)
     end subroutine dialog_read
-
-    subroutine dialog_set_binary(binary)
-        character(len=*), intent(in) :: binary
-
-        if (len_trim(binary) > 0) DIALOG_BINARY = adjustl(binary)
-    end subroutine dialog_set_binary
 
     subroutine dialog_write(dialog, str)
         type(dialog_type), intent(inout) :: dialog
@@ -1086,7 +1086,7 @@ contains
 
         if (dialog%widget == WIDGET_NONE) return
 
-        dialog%cmd = DIALOG_BINARY
+        dialog%cmd = DIALOG_EXECUTABLE
 
         ! Common options.
         if (dialog%options(C_ASCII_LINES)) call add_str('--ascii-lines')

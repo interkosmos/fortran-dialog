@@ -43,7 +43,7 @@ program wumpus
     logical         :: next
     type(game_type) :: game
 
-    call dialog_set_binary('dialog')
+    call dialog_backend('dialog')
 
     do
         call intro(state)
