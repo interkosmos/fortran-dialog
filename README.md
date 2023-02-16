@@ -11,14 +11,15 @@ the package `devel/cdialog` for an enhanced port:
 # pkg install devel/cdialog
 ```
 
-In Fortran, change the backend to `cdialog` before calling any dialog routines:
+In Fortran, add an alias to your global `profile`, or change the backend to
+`cdialog` before calling any dialog routines:
 
 ```fortran
 call dialog_backend('cdialog')
 ```
 
 The basic widgets are compatible to [Xdialog](http://xdialog.free.fr/) as well.
-Just set the binary to `Xdialog`.
+Just set the backend to `Xdialog`.
 
 ## Coverage
 
@@ -64,10 +65,18 @@ $ cd fortran-dialog/
 $ make
 ```
 
-If you prefer the Fortran Package Manager, run:
+If you prefer the [Fortran Package Manager](https://github.com/fortran-lang/fpm)
+run:
 
 ```
 $ fpm build --profile=release
+```
+
+You can add *fortran-dialog* as a dependency to your `fpm.toml`:
+
+```toml
+[dependencies]
+fortran-dialog = { git = "https://github.com/interkosmos/fortran-dialog.git" }
 ```
 
 ## Example
@@ -338,8 +347,8 @@ call dialog_close(dialog)
 character(len=2)  :: range
 type(dialog_type) :: dialog
 
-call dialog_rangebox(dialog, 'Select range with PGUP/PGDOWN:', 7, 32, min_value=0, max_value=42, &
-                     default_value=21, title='Range Box')
+call dialog_rangebox(dialog, 'Select range with PGUP/PGDOWN:', 7, 32, min_value=0, &
+                     max_value=42, default_value=21, title='Range Box')
 call dialog_read(dialog, range)
 call dialog_close(dialog)
 
