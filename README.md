@@ -11,8 +11,8 @@ the package `devel/cdialog` for an enhanced port:
 # pkg install devel/cdialog
 ```
 
-In Fortran, add an alias to your global `profile`, or change the backend to
-`cdialog` before calling any dialog routines:
+Add an alias to your global `profile`, or set the backend to `cdialog` before
+calling any dialog routines from Fortran:
 
 ```fortran
 call dialog_backend('cdialog')
@@ -65,7 +65,7 @@ $ cd fortran-dialog/
 $ make
 ```
 
-If you prefer the [Fortran Package Manager](https://github.com/fortran-lang/fpm)
+If you prefer the [Fortran Package Manager](https://github.com/fortran-lang/fpm),
 run:
 
 ```
