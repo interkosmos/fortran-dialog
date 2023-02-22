@@ -148,7 +148,7 @@ contains
     end subroutine widget_buildlist
 
     subroutine widget_calendar()
-        character(len=10) :: date
+        character(len=12) :: date
         type(dialog_type) :: dialog
 
         call dialog_calendar(dialog, 'Enter date:', 3, 42, &
@@ -454,10 +454,10 @@ contains
     end subroutine widget_radiolist
 
     subroutine widget_rangebox()
-        character(len=2)  :: range
+        character(len=3)  :: range
         type(dialog_type) :: dialog
 
-        call dialog_rangebox(dialog, 'Select range with PGUP/PGDOWN:', 7, 32, &
+        call dialog_rangebox(dialog, 'Select range with PGUP/PGDOWN:', 10, 52, &
                              0, 42, 21, title='Demo')
         call dialog_read(dialog, range)
         call dialog_close(dialog)
@@ -498,7 +498,7 @@ contains
         tree(6) = tree_type('tag6', 'six',   'off', 3)
         tree(7) = tree_type('tag7', 'seven', 'off', 3)
         tree(8) = tree_type('tag8', 'eight', 'off', 4)
-        tree(9) = tree_type('tag9', 'none',  'off', 1)
+        tree(9) = tree_type('tag9', 'nine',  'off', 1)
 
         call dialog_treeview(dialog, 'Select item:', 0, 0, 0, tree, title='Tree View')
         call dialog_read(dialog, selected)

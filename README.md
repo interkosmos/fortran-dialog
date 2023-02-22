@@ -25,35 +25,35 @@ Just set the backend to `Xdialog`.
 
 | Widget         | Supported |
 |----------------|-----------|
-| `buildlist`    | ✓         |
-| `calendar`     | ✓         |
-| `checklist`    | ✓         |
-| `dselect`      | ✓         |
-| `editbox`      | ✓         |
-| `form`         | ✓         |
-| `fselect`      | ✓         |
-| `gauge`        | ✓         |
-| `infobox`      | ✓         |
-| `inputbox`     | ✓         |
-| `inputmenu`    | ✓         |
-| `menu`         | ✓         |
-| `mixedform`    | ✓         |
-| `mixedgauge`   | ✓         |
-| `msgbox`       | ✓         |
-| `pause`        | ✓         |
-| `passwordbox`  | ✓         |
-| `passwordform` | ✓         |
-| `prgbox`       | ✓         |
-| `programbox`   | ✓         |
-| `progressbox`  | ✓         |
-| `radiolist`    | ✓         |
-| `rangebox`     | ✓         |
-| `tailbox`      | ✓         |
+| `buildlist`    |     ✓     |
+| `calendar`     |     ✓     |
+| `checklist`    |     ✓     |
+| `dselect`      |     ✓     |
+| `editbox`      |     ✓     |
+| `form`         |     ✓     |
+| `fselect`      |     ✓     |
+| `gauge`        |     ✓     |
+| `infobox`      |     ✓     |
+| `inputbox`     |     ✓     |
+| `inputmenu`    |     ✓     |
+| `menu`         |     ✓     |
+| `mixedform`    |     ✓     |
+| `mixedgauge`   |     ✓     |
+| `msgbox`       |     ✓     |
+| `pause`        |     ✓     |
+| `passwordbox`  |     ✓     |
+| `passwordform` |     ✓     |
+| `prgbox`       |     ✓     |
+| `programbox`   |     ✓     |
+| `progressbox`  |     ✓     |
+| `radiolist`    |     ✓     |
+| `rangebox`     |     ✓     |
+| `tailbox`      |     ✓     |
 | `tailboxbg`    |           |
-| `textbox`      | ✓         |
-| `timebox`      | ✓         |
-| `treeview`     | ✓         |
-| `yesno`        | ✓         |
+| `textbox`      |     ✓     |
+| `timebox`      |     ✓     |
+| `treeview`     |     ✓     |
+| `yesno`        |     ✓     |
 
 ## Build Instructions
 
@@ -99,7 +99,7 @@ $ gfortran -o example example.f90 libfortran-dialog.a
 $ ./example
 ```
 
-For a graphical message box, write instead:
+To create a graphical message box with *Xdialog(1)*, write instead:
 
 ```fortran
 ! example.f90
@@ -153,7 +153,7 @@ print '("Selected items: ", a)', trim(selected)
 ### calendar
 
 ```fortran
-character(len=10) :: date
+character(len=12) :: date
 type(dialog_type) :: dialog
 
 call dialog_calendar(dialog, 'Enter date:', 3, 42, day=1, month=1, year=2025, &
@@ -504,7 +504,7 @@ print '("Selected item: ", a)', trim(selected)
 ### rangebox
 
 ```fortran
-character(len=2)  :: range
+character(len=3)  :: range
 type(dialog_type) :: dialog
 
 call dialog_rangebox(dialog, 'Select range with PGUP/PGDOWN:', 7, 32, min_value=0, &
