@@ -9,3 +9,6 @@ keywords = ["dialog", "tui"]
 
 [library]
 source-dir = "src"
+
+[install]
+library = true
