@@ -40,7 +40,7 @@ program main
              menu_type('treeview',     'Tree View'), &
              menu_type('yesno',        'Yes/No') ]
 
-    call dialog_backend('cdialog')
+    call dialog_backend('dialog')
 
     do
         call dialog_menu(dialog, NL // 'Welcome to the showcase!' // NL // NL // &

@@ -12,3 +12,18 @@ source-dir = "src"
 
 [install]
 library = true
+
+[[executable]]
+source-dir = "examples"
+name = "hamurabi"
+main = "hamurabi.f90"
+
+[[executable]]
+source-dir = "examples"
+name = "showcase"
+main = "showcase.f90"
+
+[[executable]]
+source-dir = "examples"
+name = "wumpus"
+main = "wumpus.f90"
