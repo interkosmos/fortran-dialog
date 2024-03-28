@@ -18,8 +18,8 @@ program wumpus
     character(len=*), parameter :: NL  = new_line('a')
     character(len=*), parameter :: NL2 = NL // NL
 
-    integer, parameter :: ACTION_EXIT = 1
-    integer, parameter :: ACTION_HELP = 2
+    integer, parameter :: STATE_EXIT = 1
+    integer, parameter :: STATE_HELP = 2
 
     integer, parameter :: MAXDIST = 5
     integer, parameter :: NROOMS  = 20
@@ -48,12 +48,12 @@ program wumpus
     do
         call intro(state)
 
-        if (state == ACTION_HELP) then
+        if (state == STATE_HELP) then
             call help()
             cycle
         end if
 
-        if (state == ACTION_EXIT) exit
+        if (state == STATE_EXIT) exit
 
         call init()
 
@@ -63,6 +63,14 @@ program wumpus
         end do
     end do
 contains
+    pure logical function array_has(array, value) result(has)
+        !! Returns `.true.` if array contains value.
+        integer, intent(in) :: array(:)
+        integer, intent(in) :: value
+
+        has = (findloc(array, value, dim=1) > 0)
+    end function array_has
+
     pure function itoa(i) result(a)
         !! Converts integer to character string of length 2.
         integer, intent(in) :: i
@@ -95,9 +103,10 @@ contains
 
     integer function next_room(from) result(next)
         !! Returns random room adjacent to `from`.
-        integer, intent(in)  :: from
-        integer              :: i
-        real                 :: r
+        integer, intent(in) :: from
+
+        integer :: i
+        real    :: r
 
         call random_number(r)
         i = 1 + int(r * 3)
@@ -162,6 +171,7 @@ contains
             'Originally written by Gregory Yob in BASIC. Ported to Fortran by ' // &
             'the illustrious Philipp Engel.' // NL2 // &
             'Select <Help> for the complete game instructions.'
+
         integer, intent(out) :: state
 
         state = dialog_yesno(TEXT, 17, 60, help_button=.true., no_collapse=.true., &
@@ -258,7 +268,7 @@ contains
             next = dirs(i)
             if (next == 0) exit
 
-            if (next == last .or. findloc(ROOMS(last, :), next, 1) == 0) then
+            if (next == last .or. .not. array_has(ROOMS(last, :), next)) then
                 next = next_room(last)
             end if
 
@@ -283,7 +293,8 @@ contains
 
     subroutine turn(next)
         !! Runs next turn.
-        logical, intent(out)          :: next
+        logical, intent(out) :: next
+
         character(len=:), allocatable :: text
         integer                       :: answer, exit_stat, room
         integer                       :: i, n
@@ -315,13 +326,13 @@ contains
             return
         end if
 
-        if (findloc(game%pits, game%hero, 1) > 0) then
+        if (array_has(game%pits, game%hero)) then
             call dialog_msgbox(NL // 'Aaaaaaaaaaa! You have fallen into a bottomless pit.', 7, 60, &
                                backtitle=BACKTITLE, title='Pit')
             return
         end if
 
-        if (findloc(game%bats, game%hero, 1) > 0) then
+        if (array_has(game%bats, game%hero)) then
             call dialog_msgbox(NL // 'A bat has carried you into another empty room.', 7, 60, &
                                backtitle=BACKTITLE, title='Bat')
             game%hero = empty_room()
@@ -339,12 +350,12 @@ contains
                 n = n + 1
             end if
 
-            if (findloc(game%bats, room, 1) > 0) then
+            if (array_has(game%bats, room)) then
                 text = text // 'Bats nearby!' // NL
                 n = n + 1
             end if
 
-            if (findloc(game%pits, room, 1) > 0) then
+            if (array_has(game%pits, room)) then
                 text = text // 'You feel a draft!' // NL
                 n = n + 1
             end if

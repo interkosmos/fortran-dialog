@@ -154,7 +154,8 @@ contains
     end subroutine nobush
 
     subroutine play(game)
-        character(len=6), parameter    :: SP = ' '
+        character(len=6), parameter :: SP = ' '
+
         type(game_type), intent(inout) :: game
 
         character(len=:), allocatable :: report
@@ -298,7 +299,8 @@ contains
     end subroutine review
 
     subroutine title()
-        character(len=*), parameter :: TEXT = NL // repeat(' ', 20) // &
+        character(len=*), parameter :: TEXT = &
+            NL // repeat(' ', 20) // &
             'Creative Computing' // NL // repeat(' ', 18) // &
             'Morristown, New Jersey' // NL2 // &
             'Try your hand at governing ancient Sumeria ' // &
@@ -308,6 +310,7 @@ contains
             'and modified for EduSystem 70 by David H. Ahl, Digital. ' // &
             'Modified for 8k Microsoft BASIC by Peter Turnbull. Converted ' // &
             'to Fortran by Philipp Engel.'
+
         integer :: answer
 
         answer = dialog_yesno(TEXT, 17, 64, no_collapse=.true., no_label='Quit', &
@@ -317,7 +320,8 @@ contains
 
     subroutine trade(game)
         type(game_type), intent(inout) :: game
-        integer                        :: nacres
+
+        integer :: nacres
 
         do
             nacres = input('How many acres do you wish to buy?')
