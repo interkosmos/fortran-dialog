@@ -21,7 +21,7 @@ examples: $(TARGET)
 	$(FC) $(FFLAGS) -o wumpus examples/wumpus.f90 $(TARGET)
 
 clean:
-	if [ `ls -1 include/*.mod 2>/dev/null | wc -l` -gt 0 ]; then rm include/*.mod; fi
+	if [ `ls -1 *.mod 2>/dev/null | wc -l` -gt 0 ]; then rm *.mod; fi
 	if [ `ls -1 *.o 2>/dev/null | wc -l` -gt 0 ]; then rm *.o; fi
 	if [ -e $(TARGET) ]; then rm $(TARGET); fi
 	if [ -e hamurabi ]; then rm hamurabi; fi
