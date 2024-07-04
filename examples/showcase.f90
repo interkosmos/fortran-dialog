@@ -180,7 +180,7 @@ contains
         character(len=512) :: path
         type(dialog_type)  :: dialog
 
-        call dialog_dselect(dialog, '/', 8, 72, title='Select Directory')
+        call dialog_dselect(dialog, '/', 18, 72, title='Select Directory')
         call dialog_read(dialog, path)
         call dialog_close(dialog)
 
@@ -228,7 +228,7 @@ contains
         character(len=512) :: path
         type(dialog_type)  :: dialog
 
-        call dialog_fselect(dialog, '/', 8, 72, title='Select File')
+        call dialog_fselect(dialog, '/', 18, 72, title='Select File')
         call dialog_read(dialog, path)
         call dialog_close(dialog)
 

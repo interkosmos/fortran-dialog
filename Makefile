@@ -9,7 +9,7 @@ TARGET  = libfortran-dialog.a
 
 .PHONY: all clean examples
 
-$(TARGET):
+$(TARGET): src/dialog.f90
 	$(FC) $(FFLAGS) -c src/dialog.f90
 	$(AR) $(ARFLAGS) $(TARGET) dialog.o
 
